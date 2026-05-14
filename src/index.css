@@ -1,0 +1,118 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  font-family: 'Noto Sans KR', sans-serif;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f8f7f5;
+}
+
+/* Scrollbar hide */
+.hide-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Badges */
+.badge-hot {
+  background: linear-gradient(135deg, #538be8, #0c5397);
+}
+
+.badge-new {
+  background: linear-gradient(135deg, #3ecf8e, #1ba672);
+}
+
+/* Card hover */
+.restaurant-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.restaurant-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* Heart button */
+.heart-btn {
+  transition: all 0.2s;
+}
+
+.heart-btn:hover {
+  transform: scale(1.15);
+}
+
+/* Time/Date buttons */
+.time-btn {
+  transition: all 0.15s;
+}
+
+.time-btn:hover {
+  border-color: #f7453f;
+  color: #f7453f;
+}
+
+.time-btn.active {
+  background: #0f47dc;
+  color: white;
+  border-color: #04134a;
+}
+
+/* Tabs */
+.tab-btn.active {
+  border-bottom: 2px solid #3f64f7;
+  color: #192288;
+  font-weight: 700;
+}
+
+/* Category chips */
+.category-chip {
+  transition: all 0.15s;
+  cursor: pointer;
+}
+
+.category-chip:hover {
+  border-color: #3f64f7;
+  color: #145a87;
+}
+
+.category-chip.active {
+  background: #f7453f;
+  color: white;
+  border-color: #f7453f;
+}
+
+/* Modal */
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* Animations */
+.slide-up {
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.star-gold {
+  color: #fbbf24;
+}
