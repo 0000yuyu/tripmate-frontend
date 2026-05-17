@@ -4,12 +4,17 @@ import {BrowserRouter} from 'react-router-dom';
 import './index.css';
 import App from './App';
 import {ProfileProvider} from "./hook/userContext";
+import {CompanyProfileProvider} from "./hook/companyContext";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
     <React.StrictMode>
-      <ProfileProvider><BrowserRouter>
-        <App/>
-      </BrowserRouter>
-      </ProfileProvider><
-      /React.StrictMode>);
+      <ProfileProvider>
+        <CompanyProfileProvider>
+          <BrowserRouter>
+            <App/>
+          </BrowserRouter>
+        </CompanyProfileProvider>
+      </ProfileProvider>
+    </React.StrictMode>
+);

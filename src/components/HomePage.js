@@ -15,10 +15,10 @@ export function HomePage({onRestaurantClick}) {
       <>
         {/* Hero Banner */}
         <div
-            className="mt-4 rounded-3xl overflow-hidden relative h-44 bg-gradient-to-br from-blue-500 to-black">
+            className="mt-4 rounded-3xl w-full overflow-hidden relative h-44 bg-gradient-to-br from-blue-500 to-black">
           <img
               src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80"
-              className="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-40"
+              className="absolute w-full h-full object-cover mix-blend-overlay opacity-40"
               alt="banner"
           />
           <div className="relative p-6">

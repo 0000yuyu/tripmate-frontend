@@ -4,6 +4,7 @@ import axios from "../util/axiosInstance";
 import axiosInstance from "../util/axiosInstance";
 import {saveToken} from "../util/auth";
 import {requestForToken} from "../hook/usePushManager";
+import LogoImg from '../image/logo.png'
 
 function Form({children}) {
   return (
@@ -166,12 +167,8 @@ export default function LoginPage() {
         <Form>
           <FormContent>
             <div
-                className="flex items-end gap-2 justify-start w-full py-[20px]">
-
-              <span
-                  className="text-blue-600 font-black text-3xl tracking-tight">TripMate</span>
-              <span
-                  className="text-gray-900 font-semibold text-[13px]">함께 하는 여행</span>
+                className="flex items-center justify-center gap-2 w-full py-[20px]">
+              <img className={"h-[70px]"} src={LogoImg}/>
 
             </div>
             <Input

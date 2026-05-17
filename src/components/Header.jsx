@@ -2,6 +2,7 @@ import {useState} from "react";
 import {SearchBar} from "./UI";
 import {useNavigate} from "react-router-dom";
 import {IoIosNotificationsOutline} from "react-icons/io";
+import LogoRowImg from "../image/logo_row.png";
 
 const TABS = ["홈", "일정", "상품", "매칭", "My"];
 const tapMap = {
@@ -22,10 +23,8 @@ export default function Header({activeTab, onTabChange}) {
             className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-end gap-2">
-            <span
-                className="text-blue-600 font-black text-2xl tracking-tight">TripMate</span>
-            <span
-                className="text-gray-900 font-black text-[12px] ">함께라서 더 즐거운 여행</span>
+            <img className={"h-[50px]"}
+                 src={LogoRowImg}/>
           </div>
 
           {/* Icons */}

@@ -29,3 +29,22 @@ export const isLoggedIn = () => {
   }
   return true
 }
+export const saveCompany = (id) => {
+  sessionStorage.setItem('company', id);
+}
+
+export const getCompany = () => {
+  return sessionStorage.getItem('company');
+}
+
+export const removeCompany = () => {
+  sessionStorage.removeItem('remove');
+}
+
+export const hasCompany = () => {
+  const id = getCompany();
+  if (!id) {
+    return false;
+  }
+  return true
+}

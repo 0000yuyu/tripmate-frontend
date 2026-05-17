@@ -13,7 +13,7 @@
     "react-router-dom": "^7.15.0",
     "react-scripts": "5.0.1"
   },
-  "proxy": "http://43.201.242.253:8080",
+  "proxy": "http://localhost:8080",
   "devDependencies": {
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.24",

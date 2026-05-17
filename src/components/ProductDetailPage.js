@@ -16,6 +16,79 @@ import {useCompanyProfile} from "../hook/companyContext";
 import axiosInstance from "../util/axiosInstance";
 import {saveCompany} from "../util/auth";
 
+const products = [
+  {
+    "id": "8b25c875-a69e-4b88-8663-058e0457303b",
+    "companyId": "9bb72160-90f5-4ed8-982d-aad831fed32b",
+    "productName": "시부야 VR 테마파크 이용권",
+    "description": "최신 VR 콘텐츠와 인터랙티브 게임을 체험할 수 있는 시부야 실내 테마파크 자유이용권입니다.",
+    "address": {
+      "country": "JP",
+      "state": "Tokyo",
+      "city": "Shibuya",
+      "addressLine": "1-15-9 Jinnan, Shibuya-ku"
+    },
+    "price": 6100.00,
+    "status": "ACTIVE"
+  },
+  {
+    "id": "5e579ed0-bf9f-42e0-8afe-d7f1f6240f4b",
+    "companyId": "b1bf10f5-f273-4b36-a87c-7dcbe13bbdea",
+    "productName": "도톤보리 야시장 미식 투어",
+    "description": "오사카 도톤보리 지역의 대표 길거리 음식과 현지 맛집을 탐방하는 야간 푸드 투어 상품입니다.",
+    "address": {
+      "country": "JP",
+      "state": "Osaka",
+      "city": "Osaka",
+      "addressLine": "Dotonbori, Chuo Ward"
+    },
+    "price": 6900.00,
+    "status": "ACTIVE"
+  },
+  {
+    "id": "5ba325bc-192b-4ba0-b4e2-3b1922e3465e",
+    "companyId": "f1781c14-846c-4ea8-bbf3-d58ef5f4fc99",
+    "productName": "도쿄 스카이트리 야경 전망권",
+    "description": "도쿄 스카이트리 전망대에서 도쿄 야경을 감상할 수 있는 입장권 상품입니다.",
+    "address": {
+      "country": "JP",
+      "state": "Tokyo",
+      "city": "Sumida",
+      "addressLine": "1 Chome-1-2 Oshiage, Sumida City"
+    },
+    "price": 4200.00,
+    "status": "ACTIVE"
+  },
+  {
+    "id": "139ae896-654a-48af-8554-c8642e91ea5d",
+    "companyId": "f1781c14-846c-4ea8-bbf3-d58ef5f4fc99",
+    "productName": "도쿄 스카이트리 야경 전망권2",
+    "description": "도쿄 스카이트리 전망대에서 도쿄 야경을 감상할 수 있는 입장권 상품입니다.",
+    "address": {
+      "country": "JP",
+      "state": "Tokyo",
+      "city": "Sumida",
+      "addressLine": "1 Chome-1-2 Oshiage, Sumida City"
+    },
+    "price": 4200.00,
+    "status": "ACTIVE"
+  },
+  {
+    "id": "60f953c9-5122-4b2d-b9a1-a1ca15262b06",
+    "companyId": "f1781c14-846c-4ea8-bbf3-d58ef5f4fc99",
+    "productName": "도쿄 스카이트리 야경 전망권3",
+    "description": "도쿄 스카이트리 전망대에서 도쿄 야경을 감상할 수 있는 입장권 상품입니다.",
+    "address": {
+      "country": "JP",
+      "state": "Tokyo",
+      "city": "Sumida",
+      "addressLine": "1 Chome-1-2 Oshiage, Sumida City"
+    },
+    "price": 4200.00,
+    "status": "ACTIVE"
+  }
+]
+
 /**
  * [1] 레이아웃 컴포넌트: 사이드바 + 우측 Outlet
  */

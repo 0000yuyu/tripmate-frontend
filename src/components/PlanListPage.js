@@ -55,10 +55,9 @@ export function PlanListPage() {
   });
 
   return (
-      <div className="w-full overflow-hidden max-w-6xl mx-auto mt-8 px-4">
+      <div className="w-full overflow-hidden max-w-6xl mx-auto mt-8">
         <div
             className="flex flex-wrap items-center gap-2 pb-4 border-b border-gray-200">
-
           {/* 이름 검색 인풋 */}
           <div className="flex-grow min-w-[200px]">
             <input
