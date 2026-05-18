@@ -1,139 +1,84 @@
-import React, {useEffect, useState} from "react";
-import {Outlet, Route, Routes} from "react-router-dom";
-import Header from "./components/Header";
-import ReservationModal from "./components/ReservationModal";
-import {HomePage} from "./components/HomePage";
-import MyPage from "./components/Mypage";
-import CompanyPage from "./components/CompanyPage";
-import {useProfile} from "./hook/userContext";
-import {isLoggedIn} from "./util/auth";
-import LoginPage from "./components/LoginPage";
-import {PlanListPage} from "./components/PlanListPage";
-import PlanDetailPage from "./components/PlanDetailPage";
-import PlanCreatePage from "./components/PlanPage";
-import NotificationPage from "./components/NotificationPage";
-import MatchingPage from "./components/MatchingPage";
+import {useEffect, useState} from "react";
+import {Navigate, Outlet, Route, Routes} from "react-router-dom";
 
-// FCM 관련 임포트
-import {onMessageListener} from "./hook/usePushManager";
-import ForegroundModal from "./components/Modal";
-import BookingPage from "./components/ProductDetailPage";
+import {onMessageListener} from "@hooks/usePushManager";
+import LoginPage from "@pages/LoginPage.jsx";
+import {isLoggedIn} from "@utils/auth.js";
+import Header from "@components/Header.jsx";
+import {PlanListPage} from "@pages/PlanListPage.jsx";
+
+function HomePage() {
+	return <div>hello</div>;
+}
+
+function RequireAuth() {
+	return isLoggedIn() ? <Outlet/> : <Navigate to="/login" replace/>;
+}
+
+function AnonymousOnly() {
+	return isLoggedIn() ? <Navigate to="/" replace/> : <Outlet/>;
+}
 
 export default function App() {
-  const {user} = useProfile();
-
-  if (isLoggedIn() && (user.role === "USER" && user.name !== "송유진")) {
-    return <div>접근 권한이 없습니다.</div>;
-  }
-
-  const ProfileRouter = ({user}) => {
-    // if (user?.role === "USER") {
-    //   return <MyPage/>;
-    // }
-    // if (user?.role === "SELLER") {
-    //   return <CompanyPage/>;
-    // }
-    return <MyPage/>
-  };
-
-// 라우트 설정부
-
-  return (
-      <Routes>
-        <Route path="/" element={<AppLayout/>}>
-          <Route index element={<HomePage/>}/>
-          <Route path="login" element={<LoginPage/>}/>
-          <Route path="plans" element={<PlanListPage/>}/>
-          <Route path="plan/create" element={<PlanCreatePage/>}/>
-          <Route path="notifications" element={<NotificationPage/>}/>
-          <Route path="matching" element={<MatchingPage/>}/>
-          <Route path="profile/*" element={<ProfileRouter user={user}/>}/>
-          <Route path="plans/:plan_id" element={<PlanDetailPage/>}/>
-          <Route path="company" element={<CompanyPage/>}/>
-          <Route path="products/*" element={<BookingPage/>}/>
-        </Route>
-      </Routes>
-  );
+	return (
+			<Routes>
+				<Route path="/" element={<AppLayout/>}>
+					
+					{/* 공통 레이아웃 안에서 인증 여부에 따라 페이지 분리 */}
+					<Route element={<RequireAuth/>}>
+						<Route index element={<HomePage/>}/>
+						<Route path="plans" element={<PlanListPage/>}/>
+					</Route>
+					
+					<Route element={<AnonymousOnly/>}>
+						<Route path="login" element={<LoginPage/>}/>
+					</Route>
+				
+				</Route>
+			</Routes>
+	);
 }
 
 function AppLayout() {
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [activeTab, setActiveTab] = useState("홈");
-
-  // --- FCM 포그라운드 알림 상태 ---
-  const [showNotification, setShowNotification] = useState(false);
-  const [notificationInfo, setNotificationInfo] = useState({
-    title: "",
-    body: "",
-    link: "",
-  });
-
-  useEffect(() => {
-    let unsubscribe;
-
-    // 포그라운드 메시지 리스너 설정
-    const setupFCMListener = async () => {
-      const unsub = await onMessageListener((payload) => {
-        console.log("포그라운드 메시지 수신:", payload);
-        setNotificationInfo({
-          title: payload.notification?.title || payload.data?.title || "알림",
-          body: payload.notification?.body || payload.data?.body
-              || "메시지가 도착했습니다.",
-          link: payload.data?.link || payload.data?.youtubeLink || "",
-        });
-        setShowNotification(true);
-      });
-      unsubscribe = unsub;
-    };
-
-    if (isLoggedIn()) {
-      setupFCMListener();
-    }
-
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, []);
-
-  const isLogged = false;
-
-  return (
-      <div className="flex w-full h-screen justify-center items-center">
-        <div
-            className="flex w-full relative justify-center h-full bg-gray-100">
-          {!isLoggedIn() ? (
-              <LoginPage/>
-          ) : (
-              <div className={"w-full h-full flex flex-col"}>
-                <Header activeTab={activeTab} onTabChange={setActiveTab}/>
-
-                <main
-                    className="overflow-scroll flex px-4 justify-center h-full overflow-y-auto">
-                  {/* HomePage 등 자식 컴포넌트에서 호출할 수 있도록 context나 props 전달 가능 */}
-                  <Outlet context={{setSelectedRestaurant}}/>
-                </main>
-
-                {/* 기존 예약 모달 */}
-                {selectedRestaurant && (
-                    <ReservationModal
-                        restaurant={selectedRestaurant}
-                        onClose={() => setSelectedRestaurant(null)}
-                    />
-                )}
-
-                {/* 신규 FCM 포그라운드 알림 모달 */}
-                {showNotification && (
-                    <ForegroundModal
-                        info={notificationInfo}
-                        onClose={() => setShowNotification(false)}
-                    />
-                )}
-              </div>
-          )}
-        </div>
-      </div>
-  );
+	const [activeTab, setActiveTab] = useState("홈");
+	
+	useEffect(() => {
+		let unsubscribe;
+		
+		const setupFCMListener = async () => {
+			const unsub = await onMessageListener((payload) => {
+				console.log("포그라운드 메시지 수신:", payload);
+			});
+			unsubscribe = unsub;
+		};
+		
+		if (isLoggedIn()) {
+			setupFCMListener();
+		}
+		
+		return () => {
+			if (unsubscribe) {
+				unsubscribe();
+			}
+		};
+	}, []);
+	
+	return (
+			<div
+					className="flex w-full h-screen justify-center items-center hide-scroll">
+				<div className="flex w-full relative h-full bg-gray-100 hide-scroll">
+					<div
+							className={"w-full h-full flex flex-col justify-center border-2 hide-scroll "}>
+						<Header activeTab={activeTab} onTabChange={setActiveTab}/>
+						<main
+								className="w-full flex border-black justify-center border h-full hide-scroll">
+							<div
+									className="lg:mx-[150px] border border-blue-500 w-full hide-scroll">
+								<Outlet/>
+							</div>
+						</main>
+					</div>
+				</div>
+			</div>
+	);
 }
-
