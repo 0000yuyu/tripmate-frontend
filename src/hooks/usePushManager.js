@@ -34,6 +34,23 @@ const getDeviceType = () => {
 };
 
 // useFCM.js (또는 usePushManager.js)
+export const registerPushToken = async (accessToken) => {
+  try {
+    const deviceData = await requestForToken(); // 기존에 만든 토큰 발급 함수
+    if (deviceData) {
+      const response = await axiosInstance.post(
+          "/notifications/tokens/me",
+          { ...deviceData, channelType: "PUSH" },
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      console.log("🚀 푸시 토큰 등록/갱신 성공:", response);
+      return true;
+    }
+  } catch (e) {
+    console.error("❌ 푸시 토큰 등록 실패:", e);
+  }
+  return false;
+};
 
 export const requestForToken = async () => {
   try {

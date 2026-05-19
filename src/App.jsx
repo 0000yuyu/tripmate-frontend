@@ -1,9 +1,9 @@
 import {useEffect, useState} from "react";
 import {Navigate, Outlet, Route, Routes} from "react-router-dom";
 
-import {onMessageListener} from "@hooks/usePushManager";
+import {onMessageListener, registerPushToken} from "@hooks/usePushManager";
 import LoginPage from "@pages/LoginPage.jsx";
-import {isLoggedIn} from "@utils/auth.js";
+import {getAccessToken, isLoggedIn} from "@utils/auth.js";
 import Header from "@components/Header.jsx";
 import PlanListPage from "@pages/PlanListPage.jsx";
 import PlanDetailPage from "@pages/PlanDetailPage.jsx";
@@ -17,6 +17,7 @@ import PaymentPage from "@pages/PaymentPage.jsx";
 import HomeLandingPage from "@components/HomeView.jsx";
 import MemberShipPage from "@pages/MemberShipPage.jsx";
 import PlanCreatePage from "@pages/PlanPage.jsx";
+import {message} from "antd";
 
 function RequireAuth() {
 	return isLoggedIn() ? <Outlet/> : <Navigate to="/login" replace/>;
@@ -27,6 +28,35 @@ function AnonymousOnly() {
 }
 
 export default function App() {
+
+  useEffect(() => {
+    const token = getAccessToken();
+
+    // 1. [자동 로그인 대응] 앱 진입 시 이미 로그인된 유저라면 최신 토큰 서버 동기화
+    if (token) {
+      registerPushToken(token);
+    }
+
+    // 2. [포그라운드 리스너] 화면이 켜져 있을 때(포그라운드) 실시간 푸시 수신 감지
+    const unsubscribe = onMessageListener((payload) => {
+      console.log("🔥 포그라운드 알림 수신 성공:", payload);
+
+      // 서비스 워커나 서버 페이로드 구조에 맞춰 타이틀과 바디 추출
+      const title = payload.notification?.title || payload.data?.title || "새로운 알림";
+      const body = payload.notification?.body || payload.data?.body || "메시지가 도착했습니다.";
+
+      message.info(title,body);
+    });
+
+    // 3. 컴포넌트 언마운트 시 메모리 누수 방지를 위해 리스너 구독 해제
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, []);
+
+
 	return (
 			<Routes>
 				<Route path="/" element={<AppLayout/>}>

@@ -1,5 +1,3 @@
-// 1. import 문은 삭제하세요 (에러의 원인)
-// 2. SDK 라이브러리를 가져옵니다.
 importScripts(
     'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts(

@@ -6,9 +6,8 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { JournalView } from '../JournalView.jsx';
-import {
-  ParticipationView
-} from "@components/PostDetailView/ParticipationView.jsx";
+import { ParticipationView } from "@components/PostDetailView/ParticipationView.jsx";
+import { useProfile } from "@hooks/userContext.jsx"; // 유저 프로필 훅 추가
 
 export const ItemDetailView = ({
   item,
@@ -16,10 +15,18 @@ export const ItemDetailView = ({
   setActiveSubTab,
   onBack,
   onJoinUnit,
+  onConfirmUnit, // 호스트 전용 확정하기 핸들러 추가
   onViewProduct,
   onOrderProduct
 }) => {
+  const { user } = useProfile();
+
   if (!item) return null;
+
+  // 호스트 여부 판별 (참여자 목록 중 'HOST' 역할을 가진 유저의 ID와 현재 유저 ID 비교)
+  const currentUserId = user?.id;
+  const hostUser = item.participants?.find(p => p.participationRole === 'HOST');
+  const isHost = hostUser && hostUser.userId === currentUserId;
 
   return (
       <div className="space-y-8">
@@ -50,13 +57,27 @@ export const ItemDetailView = ({
             </div>
           </div>
 
-          {/* 우측 상단 배치: 참여하기 버튼 */}
-          <button
-              onClick={onJoinUnit}
-              className="w-full md:w-auto px-6 py-2.5 border border-[#333333] text-[#333333] hover:bg-[#333333] hover:text-white text-xs font-bold rounded-[4px] transition-all shrink-0"
-          >
-            참여하기
-          </button>
+          {/* 우측 상단 배치: 호스트 여부에 따른 버튼 조건부 렌더링 */}
+          {isHost ? (
+              <button
+                  onClick={onConfirmUnit}
+                  disabled={item.isConfirmed}
+                  className={`w-full md:w-auto px-6 py-2.5 text-xs font-bold rounded-[4px] transition-all shrink-0 border ${
+                      item.isConfirmed
+                          ? "bg-[#E6FFF2] border-[#00C853] text-[#00C853] cursor-not-allowed"
+                          : "border-[#007AFF] text-[#007AFF] hover:bg-[#007AFF] hover:text-white"
+                  }`}
+              >
+                {item.isConfirmed ? "확정 완료" : "일정 확정하기"}
+              </button>
+          ) : (
+              <button
+                  onClick={onJoinUnit}
+                  className="w-full md:w-auto px-6 py-2.5 border border-[#333333] text-[#333333] hover:bg-[#333333] hover:text-white text-xs font-bold rounded-[4px] transition-all shrink-0"
+              >
+                참여하기
+              </button>
+          )}
         </div>
 
         <div className="flex gap-8 border-b border-gray-200 text-sm font-bold">

@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Link, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import {
   User,
@@ -17,186 +16,388 @@ import {
   Filter,
   LogOut,
   SlidersHorizontal,
-  FolderOpen
+  FolderOpen,
+  ChevronDown,
+  ArrowUp,
+  ArrowDown,
+  ExternalLink
 } from 'lucide-react';
 import { useProfile } from "@hooks/userContext.jsx";
 import axiosInstance from "@/utils/axiosInstance";
 import { message } from "antd";
-import { useCompanyProfile } from "@hooks/companyContext.jsx";
 import { clearTokens } from "@utils/auth.js";
 
-// ==========================================
-// 1. 노션 데이터베이스 스타일 일정/호스트 관리 패널
-// ==========================================
-const HostManagement = () => {
-  const [subTab, setSubTab] = useState('hosting'); // 'applied' | 'hosting'
-  const [hostingTrips, setHostingTrips] = useState([]);
-  const [appliedTrips, setAppliedTrips] = useState([]); // 내가 신청한 일정 리스트
-  const [loading, setLoading] = useState(false);
+// =========================================================================
+// [커스텀 훅] 노션 스타일 열(Column)별 독립 정렬 및 다중 필터링 엔진
+// =========================================================================
+const useNotionTable = (rawData) => {
+  const [sortConfig, setSortConfig] = useState({ field: null, direction: 'asc' });
+  const [filters, setFilters] = useState({}); // { fieldName: ['값1', '값2'] } 형태로 다중 축적
+  const [activeDropdown, setActiveDropdown] = useState(null); // 현재 열려있는 필터 헤더 Key
+  const dropdownRef = useRef(null);
 
-  // 노션 스타일 정렬 및 필터 상태 관리
-  const [sortField, setSortField] = useState(null);
-  const [sortDirection, setSortDirection] = useState('asc');
-  const [statusFilter, setStatusFilter] = useState('전체');
-
+  // 외부 클릭 시 드롭다운 닫기 인터셉터
   useEffect(() => {
-    const fetchHostingData = async () => {
-      setLoading(true);
-      try {
-        if (subTab === 'hosting') {
-          const res = await axiosInstance.get('/plans/participations/received-requests');
-          setHostingTrips(res.data?.data?.content || res.data?.data || []);
-        } else {
-          // 내가 신청한 일정 데이터 API 조회부 가정
-          const res = await axiosInstance.get('/plans/participations/my-requests');
-          setAppliedTrips(res.data?.data?.content || res.data?.data || []);
-        }
-      } catch (e) {
-        console.error("데이터 바인딩 실패", e);
-      } finally {
-        setLoading(false);
+    const handleOutsideClick = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setActiveDropdown(null);
       }
     };
-    fetchHostingData();
-  }, [subTab]);
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
-  const handleAction = async (participationId, actionType) => {
-    try {
-      await axiosInstance.patch(`/plans/participations/${participationId}?action=${actionType}`);
-      message.success(`처리가 성공적으로 완료되었습니다.`);
-      // 리스트 리프레시 로직 트리거
-      const res = await axiosInstance.get('/plans/participations/received-requests');
-      setHostingTrips(res.data?.data?.content || res.data?.data || []);
-    } catch (e) {
-      message.error("요청 처리 중 오류가 발생했습니다.");
-    }
+  // 특정 열의 고유한 유니크 상태 목록 추출 (드롭다운 옵션 자동 생성용)
+  const getUniqueValues = (field) => {
+    const values = rawData.map(item => item[field]).filter(Boolean);
+    return [...new Set(values)];
   };
 
-  // 노션식 통합 정렬 / 필터링 연산 파이프라인
   const toggleSort = (field) => {
-    const isAsc = sortField === field && sortDirection === 'asc';
-    setSortDirection(isAsc ? 'desc' : 'asc');
-    setSortField(field);
+    setSortConfig(prev => {
+      if (prev.field === field) {
+        return { field, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { field, direction: 'asc' };
+    });
+    setActiveDropdown(null);
   };
 
+  const handleFilterSelect = (field, value) => {
+    setFilters(prev => {
+      const currentFilters = prev[field] || [];
+      if (currentFilters.includes(value)) {
+        const next = currentFilters.filter(v => v !== value);
+        return { ...prev, [field]: next.length > 0 ? next : undefined };
+      } else {
+        return { ...prev, [field]: [...currentFilters, value] };
+      }
+    });
+  };
+
+  const clearFilter = (field) => {
+    setFilters(prev => ({ ...prev, [field]: undefined }));
+  };
+
+  // 정렬 및 다중 필터가 결합된 실시간 데이터 가공 연산 파이프라인
   const processedData = useMemo(() => {
-    let currentList = subTab === 'hosting' ? hostingTrips : appliedTrips;
+    let result = [...rawData];
 
-    // 1. 필터 핸들러
-    if (statusFilter !== '전체') {
-      currentList = currentList.filter(item => item.participationStatus === statusFilter || item.recruitStatus === statusFilter);
-    }
+    // 1. 다중 필터 검사 구역
+    Object.keys(filters).forEach(field => {
+      const allowedValues = filters[field];
+      if (allowedValues && allowedValues.length > 0) {
+        result = result.filter(item => allowedValues.includes(item[field]));
+      }
+    });
 
-    // 2. 정렬 핸들러
-    if (sortField) {
-      currentList = [...currentList].sort((a, b) => {
-        let valA = a[sortField];
-        let valB = b[sortField];
+    // 2. 단일 정렬 처리 구역
+    if (sortConfig.field) {
+      result.sort((a, b) => {
+        let valA = a[sortConfig.field];
+        let valB = b[sortConfig.field];
+
+        if (valA === undefined || valA === null) return 1;
+        if (valB === undefined || valB === null) return -1;
+
         if (typeof valA === 'string') {
-          return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+          return sortConfig.direction === 'asc'
+              ? valA.localeCompare(valB)
+              : valB.localeCompare(valA);
         }
-        return sortDirection === 'asc' ? valA - valB : valB - valA;
+        return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
       });
     }
 
-    return currentList;
-  }, [subTab, hostingTrips, appliedTrips, sortField, sortDirection, statusFilter]);
+    return result;
+  }, [rawData, sortConfig, filters]);
+
+  return {
+    processedData,
+    sortConfig,
+    filters,
+    activeDropdown,
+    setActiveDropdown,
+    toggleSort,
+    handleFilterSelect,
+    clearFilter,
+    getUniqueValues,
+    dropdownRef
+  };
+};
+
+const statusConfig = {
+  REQUESTED: { text: '승인 대기', className: 'bg-amber-50 text-amber-600 border-amber-100' },
+  APPROVED: { text: '참여 승인', className: 'bg-[#E6FFF2] text-[#00C853] border-[#ccffd9]' },
+  REJECTED: { text: '거절됨', className: 'bg-red-50 text-red-500 border-red-100' },
+  RESERVED: { text: '예약 완료', className: 'bg-blue-50 text-[#007AFF] border-blue-100' },
+  PAID: { text: '결제 완료', className: 'bg-purple-50 text-purple-600 border-purple-100' },
+  CONFIRMED: { text: '참여 확정', className: 'bg-emerald-500 text-white border-transparent shadow-sm shadow-emerald-100' },
+  RESERVED_CANCELLED: { text: '예약 취소', className: 'bg-gray-100 text-gray-400 border-gray-200' },
+  PAYMENT_CANCELLED: { text: '결제 취소', className: 'bg-rose-50 text-rose-400 border-rose-100' },
+};
+
+// =========================================================================
+// 1. 노션 데이터베이스 스타일 일정 / 호스트 명세 관리 패널
+// =========================================================================
+const HostManagement = () => {
+  const [subTab, setSubTab] = useState('hosting'); // 'hosting' | 'applied'
+  const [rawData, setRawData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // 데이터 가공 및 백엔드 응답 평탄화(Flattening) 함수
+  const fetchTableData = async () => {
+    setLoading(true);
+    try {
+      if (subTab === 'hosting') {
+        // [호스트 모드]: 신청받은 참여 요청 조회 API
+        const res = await axiosInstance.get('/plans/participations/received-requests');
+        const contentList = res.data?.data?.content || res.data?.data || [];
+
+        // 💡 계층형 구조(Plan -> PlanUnits -> Applicants)를 1차원 이용자 목록으로 완전 분해 평탄화!
+        const flattened = [];
+        contentList.forEach(plan => {
+          if (plan.planUnits && plan.planUnits.length > 0) {
+            plan.planUnits.forEach(unit => {
+              if (unit.applicants && unit.applicants.length > 0) {
+                unit.applicants.forEach(applicant => {
+                  flattened.push({
+                    participationId: applicant.participationId,
+                    planUnitId: unit.planUnitId,
+                    planId: plan.planId,
+                    planTitle: plan.planTitle || '도쿄 투어 코스',
+                    unitTitle: unit.title || '시부야 유닛 일정',
+                    applicantName: applicant.userName || applicant.name || '동행 신청자',
+                    participationStatus: applicant.status || 'PENDING',
+                    recruitStatus: plan.recruitStatus || 'OPEN'
+                  });
+                });
+              }
+            });
+          }
+        });
+        setRawData(flattened);
+      } else {
+        // [게스트 모드]: 내가 신청한 일정 조회 API
+        const res = await axiosInstance.get('/plans/participations/my-requests');
+        const contentList = res.data?.data?.content || res.data?.data || [];
+
+        // 게스트 데이터 구조에 맞춘 유연한 매핑 파이프라인
+        const flattenedApplied = contentList.map(item => ({
+          participationId: item.participationId || item.id,
+          planId: item.planId,
+          planTitle: item.planTitle || '참여 가이드 플랜',
+          planUnitId: item.planUnitId,
+          unitTitle: item.unitTitle || '상세 연동 코스 일정',
+          participationStatus: item.participationStatus || 'APPROVED'
+        }));
+        setRawData(flattenedApplied);
+      }
+    } catch (e) {
+      console.error("데이터 구조 바인딩 실패", e);
+      setRawData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTableData();
+  }, [subTab]);
+
+  // 호스트 권한 수락 / 거절 액션 핸들러
+  const handleAction = async (planId,unitPlanId,participationId, actionType) => {
+    try {
+      await axiosInstance.patch(`/plans/${planId}/unit-plans/${unitPlanId}/participations/${participationId}/status`,{
+        status : actionType
+      });
+      message.success(`신청 건에 대해 ${actionType === 'APPROVED' ? '수락' : '거절'} 처리가 완료되었습니다.`);
+      fetchTableData(); // 처리 후 리스트 즉시 리프레시 동기화
+    } catch (e) {
+      message.error("요청 처리 조작 중 예외가 발생했습니다.");
+    }
+  };
+
+  // 커스텀 훅에 데이터 주입하여 노션식 연산 핸들러 추출
+  const table = useNotionTable(rawData);
 
   return (
-      <div className="space-y-6 animate-in fade-in duration-200 text-left">
-        {/* 서브 제어 내비바 */}
-        <div className="flex bg-[#F3F4F6] p-1 rounded-xl max-w-[280px]">
-          <button onClick={() => { setSubTab('hosting'); setStatusFilter('전체'); }} className={`flex-1 py-1.5 text-center text-xs font-black rounded-lg transition-all ${subTab === 'hosting' ? 'bg-white text-[#333333] shadow-sm' : 'text-gray-400'}`}>호스트 관리</button>
-          <button onClick={() => { setSubTab('applied'); setStatusFilter('전체'); }} className={`flex-1 py-1.5 text-center text-xs font-black rounded-lg transition-all ${subTab === 'applied' ? 'bg-white text-[#333333] shadow-sm' : 'text-gray-400'}`}>내가 신청한 일정</button>
+      <div className="space-y-5 animate-in fade-in duration-200 text-left">
+        {/* 미니멀 제어 토글 바 */}
+        <div className="flex bg-[#F3F4F6] p-1 rounded-xl max-w-[300px]">
+          <button
+              onClick={() => setSubTab('hosting')}
+              className={`flex-1 py-1.5 text-center text-xs font-black rounded-lg transition-all ${subTab === 'hosting' ? 'bg-white text-[#333333] shadow-sm' : 'text-gray-400'}`}
+          >
+            호스트 권한 관리 (수신)
+          </button>
+          <button
+              onClick={() => setSubTab('applied')}
+              className={`flex-1 py-1.5 text-center text-xs font-black rounded-lg transition-all ${subTab === 'applied' ? 'bg-white text-[#333333] shadow-sm' : 'text-gray-400'}`}
+          >
+            내가 참여한 일정 (발신)
+          </button>
         </div>
 
-        {/* 노션 스타일 제어 제어 바 (정렬/필터 헤더 통합) */}
-        <div className="flex items-center justify-between bg-white border border-[#E5E7EB] rounded-xl px-4 py-2.5 text-xs font-bold text-[#666666]">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5 text-[#333333]"><SlidersHorizontal size={13}/> 데이터베이스 필터</span>
-            <div className="h-3 w-[1px] bg-slate-200" />
-            <div className="flex items-center gap-1">
-              <span>상태 필터:</span>
-              <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-transparent font-black text-[#007AFF] outline-none cursor-pointer"
-              >
-                <option value="전체">전체 보기</option>
-                <option value="PENDING">대기 중 (PENDING)</option>
-                <option value="APPROVED">승인됨 (APPROVED)</option>
-                <option value="OPEN">모집 중 (OPEN)</option>
-              </select>
-            </div>
-          </div>
-          <span className="text-[11px] text-gray-400 font-medium">총 {processedData.length}개 항목</span>
+        {/* 상단 현재 테이블 메타 정보 가이드 랙 */}
+        <div className="flex items-center justify-between text-xs text-gray-400 px-1">
+          <span className="font-semibold flex items-center gap-1"><SlidersHorizontal size={12}/> 각 열 헤더를 클릭하여 정렬 및 독립 필터를 지정하세요.</span>
+          <span className="font-bold text-[#333333]">정렬 결과: {table.processedData.length}건 산출</span>
         </div>
 
         {loading ? (
             <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#007AFF]" size={24} /></div>
-        ) : processedData.length === 0 ? (
-            <div className="py-20 text-center border border-dashed border-gray-200 rounded-2xl text-gray-400 text-xs font-medium flex flex-col items-center gap-2">
+        ) : table.processedData.length === 0 ? (
+            <div className="py-20 text-center border border-dashed border-gray-200 rounded-2xl text-gray-400 text-xs font-medium flex flex-col items-center gap-2 bg-white">
               <FolderOpen size={24} className="opacity-30" />
-              정리된 명세 데이터 항목이 없습니다.
+              정리된 실시간 명세 항목이 존재하지 않습니다.
             </div>
         ) : (
-            /* 노션 데이터베이스 보드 테이블 마크업 완벽 재현 */
-            <div className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden shadow-sm overflow-x-auto">
-              <table className="w-full text-left text-xs min-w-[700px]">
-                <thead className="bg-[#F9FAFB] border-b border-[#E5E7EB] text-gray-500 font-bold">
+            /* 노션 데이터베이스 보드 그리드 마크업 완벽 입히기 */
+            <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm overflow-visible overflow-x-auto relative">
+              <table className="w-full text-left text-xs min-w-[850px] table-fixed">
+                <thead className="bg-[#F9FAFB] border-b border-[#E5E7EB] text-gray-500 font-bold select-none">
                 {subTab === 'hosting' ? (
                     <tr>
-                      <th className="px-5 py-3 w-16">#</th>
-                      <th className="px-5 py-3 cursor-pointer hover:bg-slate-100" onClick={() => toggleSort('planId')}>플랜 ID <ArrowUpDown size={11} className="inline ml-1" /></th>
-                      <th className="px-5 py-3 cursor-pointer hover:bg-slate-100" onClick={() => toggleSort('userName')}>신청 메이트 유저 <ArrowUpDown size={11} className="inline ml-1" /></th>
-                      <th className="px-5 py-3 text-center">참여 상태</th>
-                      <th className="px-5 py-3 text-center w-28">액션 권한</th>
+                      <th className="px-4 py-3 w-12 text-center">#</th>
+
+                      {/* 플랜 이름 헤더 */}
+                      <th className="px-4 py-3 relative overflow-visible w-1/4">
+                        <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'planTitle' ? null : 'planTitle')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
+                          <span>플랜 이름</span> <ChevronDown size={12}/>
+                        </div>
+                        {table.activeDropdown === 'planTitle' && (
+                            <HeaderFilterDrawer columnKey="planTitle" tableContext={table} title="플랜 필터" />
+                        )}
+                      </th>
+
+                      {/* 플랜 유닛 이름 헤더 */}
+                      <th className="px-4 py-3 relative overflow-visible w-1/4">
+                        <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'unitTitle' ? null : 'unitTitle')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
+                          <span>연동 유닛 일정</span> <ChevronDown size={12}/>
+                        </div>
+                        {table.activeDropdown === 'unitTitle' && (
+                            <HeaderFilterDrawer columnKey="unitTitle" tableContext={table} title="유닛 코스 필터" />
+                        )}
+                      </th>
+
+                      {/* 신청자 유저명 헤더 */}
+                      <th className="px-4 py-3 relative overflow-visible w-1/5">
+                        <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'applicantName' ? null : 'applicantName')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
+                          <span>이용자 목록</span> <ChevronDown size={12}/>
+                        </div>
+                        {table.activeDropdown === 'applicantName' && (
+                            <HeaderFilterDrawer columnKey="applicantName" tableContext={table} title="이용자 검색" />
+                        )}
+                      </th>
+
+                      {/* 참여 상태 헤더 */}
+                      <th className="px-4 py-3 relative overflow-visible w-28 text-center">
+                        <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'participationStatus' ? null : 'participationStatus')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
+                          <span>승인 상태</span> <ChevronDown size={12}/>
+                        </div>
+                        {table.activeDropdown === 'participationStatus' && (
+                            <HeaderFilterDrawer columnKey="participationStatus" tableContext={table} title="상태 분기" />
+                        )}
+                      </th>
+
+                      <th className="px-4 py-3 text-center w-28">액션 조작</th>
                     </tr>
                 ) : (
                     <tr>
-                      <th className="px-5 py-3 w-16">#</th>
-                      <th className="px-5 py-3 cursor-pointer hover:bg-slate-100" onClick={() => toggleSort('planTitle')}>참여 플랜 이름 <ArrowUpDown size={11} className="inline ml-1" /></th>
-                      <th className="px-5 py-3 cursor-pointer hover:bg-slate-100" onClick={() => toggleSort('unitTitle')}>플랜 유닛 이름 <ArrowUpDown size={11} className="inline ml-1" /></th>
-                      <th className="px-5 py-3 text-center">참여 상태</th>
+                      <th className="px-4 py-3 w-12 text-center">#</th>
+
+                      {/* 참여 플랜 이름 헤더 */}
+                      <th className="px-4 py-3 relative overflow-visible w-1/3">
+                        <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'planTitle' ? null : 'planTitle')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
+                          <span>참여 플랜 명세</span> <ChevronDown size={12}/>
+                        </div>
+                        {table.activeDropdown === 'planTitle' && (
+                            <HeaderFilterDrawer columnKey="planTitle" tableContext={table} title="플랜 필터" />
+                        )}
+                      </th>
+
+                      {/* 플랜 유닛 명세 헤더 */}
+                      <th className="px-4 py-3 relative overflow-visible w-1/3">
+                        <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'unitTitle' ? null : 'unitTitle')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
+                          <span>매핑 유닛 상세</span> <ChevronDown size={12}/>
+                        </div>
+                        {table.activeDropdown === 'unitTitle' && (
+                            <HeaderFilterDrawer columnKey="unitTitle" tableContext={table} title="유닛 코스 필터" />
+                        )}
+                      </th>
+
+                      {/* 내 참여 상태 헤더 */}
+                      <th className="px-4 py-3 relative overflow-visible w-32 text-center">
+                        <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'participationStatus' ? null : 'participationStatus')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
+                          <span>내 상태</span> <ChevronDown size={12}/>
+                        </div>
+                        {table.activeDropdown === 'participationStatus' && (
+                            <HeaderFilterDrawer columnKey="participationStatus" tableContext={table} title="상태 분기" />
+                        )}
+                      </th>
+
+                      <th className="px-4 py-3 text-center w-24">링크 이동</th>
                     </tr>
                 )}
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-[#333333] font-medium">
-                {processedData.map((item, index) => (
-                    <tr key={item.id || index} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-5 py-3.5 font-bold text-gray-400">{index + 1}</td>
+                {table.processedData.map((item, index) => (
+                    <tr key={item.participationId || index} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="px-4 py-3.5 text-center font-bold text-gray-400">{index + 1}</td>
 
                       {subTab === 'hosting' ? (
                           <>
-                            <td className="px-5 py-3.5 font-mono text-[11px] text-gray-500 truncate max-w-[120px]">{item.planId || 'a92d9521...'}</td>
-                            <td className="px-5 py-3.5 font-black">{item.userName || item.name || '동행 신청자'}</td>
-                            <td className="px-5 py-3.5 text-center">
-                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-black ${
-                            item.participationStatus === 'PENDING' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-[#007AFF]'
-                        }`}>
-                          {item.participationStatus || 'PENDING'}
-                        </span>
+                            <td className="px-4 py-3.5 font-black text-slate-800 truncate">{item.planTitle}</td>
+                            <td className="px-4 py-3.5 text-slate-500 truncate">{item.unitTitle}</td>
+                            <td className="px-4 py-3.5 font-bold text-slate-700 truncate">{item.applicantName}</td>
+                            <td className="px-4 py-3.5 text-center">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-black ${statusConfig[item.participationStatus].className}`}>
+                                {statusConfig[item.participationStatus].text}
+                              </span>
                             </td>
-                            <td className="px-5 py-3.5 text-center">
-                              {/* PENDING(대기) 상태일 때만 조작 단추 정밀 활성화 */}
-                              {item.participationStatus === 'PENDING' ? (
+                            <td className="px-4 py-3.5 text-center">
+                              {item.participationStatus === 'REQUESTED' ? (
                                   <div className="flex items-center justify-center gap-1.5">
-                                    <button onClick={() => handleAction(item.id, 'approve')} className="p-1 bg-[#007AFF] text-white rounded hover:bg-blue-600 transition-colors"><Check size={12} /></button>
-                                    <button onClick={() => handleAction(item.id, 'reject')} className="p-1 bg-white border border-slate-200 text-gray-400 rounded hover:bg-slate-50 transition-colors"><X size={12} /></button>
+                                    <button
+                                        onClick={() => handleAction(item.planId,item.planUnitId,item.participationId, 'APPROVED')}
+                                        className="p-1 bg-[#007AFF] text-white rounded hover:bg-blue-600 transition-colors"
+                                        title="수락하기"
+                                    >
+                                      <Check size={11} strokeWidth={3} />
+                                    </button>
+                                    <button
+                                        onClick={() => handleAction(item.planId,item.planUnitId,item.participationId, 'REJECTED')}
+                                        className="p-1 bg-white border border-slate-200 text-gray-400 rounded hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
+                                        title="거절하기"
+                                    >
+                                      <X size={11} strokeWidth={3} />
+                                    </button>
                                   </div>
                               ) : (
-                                  <span className="text-[11px] text-gray-400 font-semibold">-</span>
+                                  <span className="text-[11px] text-gray-300 font-bold">-</span>
                               )}
                             </td>
                           </>
                       ) : (
                           <>
-                            <td className="px-5 py-3.5 font-black text-slate-800">{item.planTitle || '도쿄 가이드 투어'}</td>
-                            <td className="px-5 py-3.5 text-slate-500">{item.unitTitle || '시부야 맛집 탐방 코스'}</td>
-                            <td className="px-5 py-3.5 text-center">
-                        <span className="px-2.5 py-1 rounded-md text-[10px] font-black bg-slate-100 text-slate-600">
-                          {item.participationStatus || 'APPROVED'}
-                        </span>
+                            <td className="px-4 py-3.5 font-black text-slate-800 truncate">{item.planTitle}</td>
+                            <td className="px-4 py-3.5 text-slate-500 truncate">{item.unitTitle}</td>
+                            <td className="px-4 py-3.5 text-center">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-black ${
+                                  item.participationStatus === 'APPROVED' ? 'bg-blue-50 text-[#007AFF]' : 'bg-amber-50 text-amber-600'
+                              }`}>
+                                {item.participationStatus}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5 text-center">
+                              <Link
+                                  to={`/products/detail/${item.planId || 'view'}`}
+                                  className="inline-flex items-center justify-center gap-1 text-[11px] font-bold text-[#007AFF] hover:underline"
+                              >
+                                <span>이동</span>
+                                <ExternalLink size={10} />
+                              </Link>
                             </td>
                           </>
                       )}
@@ -210,9 +411,83 @@ const HostManagement = () => {
   );
 };
 
-// ==========================================
-// 2. 내 업체 목록 관리 패널 (정밀 목록화)
-// ==========================================
+// =========================================================================
+// [공통 하위 레이어] 노션 스타일 헤더 드롭다운 모달 가젯 패널
+// =========================================================================
+const HeaderFilterDrawer = ({ columnKey, tableContext, title }) => {
+  const {
+    sortConfig,
+    toggleSort,
+    filters,
+    handleFilterSelect,
+    clearFilter,
+    getUniqueValues,
+    dropdownRef
+  } = tableContext;
+
+  const uniqueOptions = getUniqueValues(columnKey);
+  const currentActiveFilters = filters[columnKey] || [];
+
+  return (
+      <div
+          ref={dropdownRef}
+          className="absolute top-full left-0 mt-1.5 w-[210px] bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-3 text-left font-sans font-medium text-[#333333]"
+      >
+        {/* 정렬 유틸 액션 랙 */}
+        <div className="space-y-1 pb-2 border-b border-gray-100 text-[11px]">
+          <button
+              onClick={() => toggleSort(columnKey)}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 ${sortConfig.field === columnKey && sortConfig.direction === 'asc' ? 'bg-blue-50 font-black text-[#007AFF]' : ''}`}
+          >
+            <ArrowUp size={11} /> 오름차순 정렬
+          </button>
+          <button
+              onClick={() => toggleSort(columnKey)}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 ${sortConfig.field === columnKey && sortConfig.direction === 'desc' ? 'bg-blue-50 font-black text-[#007AFF]' : ''}`}
+          >
+            <ArrowDown size={11} /> 내림차순 정렬
+          </button>
+        </div>
+
+        {/* 상태 선택 필터 체크박스 랙 */}
+        <div className="pt-2">
+          <div className="flex items-center justify-between px-2 mb-1.5">
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-tight">{title}</span>
+            {currentActiveFilters.length > 0 && (
+                <button onClick={() => clearFilter(columnKey)} className="text-[9px] font-black text-red-500 hover:underline">초기화</button>
+            )}
+          </div>
+          <div className="max-h-[140px] overflow-y-auto space-y-0.5 pr-1 text-[11px]">
+            {uniqueOptions.length === 0 ? (
+                <span className="text-gray-300 block px-2 py-1 text-[10px]">지정 가능한 상태 없음</span>
+            ) : (
+                uniqueOptions.map(option => {
+                  const isChecked = currentActiveFilters.includes(option);
+                  return (
+                      <label
+                          key={option}
+                          className="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-50 cursor-pointer w-full select-none"
+                      >
+                        <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleFilterSelect(columnKey, option)}
+                            className="rounded border-gray-300 text-[#007AFF] focus:ring-[#007AFF] w-3 h-3"
+                        />
+                        <span className="truncate flex-1">{option}</span>
+                      </label>
+                  );
+                })
+            )}
+          </div>
+        </div>
+      </div>
+  );
+};
+
+// =========================================================================
+// 2. 내 업체 목록 관리 패널
+// =========================================================================
 const CompanyManagement = () => {
   const [companies, setCompanies] = useState([]);
   const [isCreating, setIsCreating] = useState(false);
@@ -222,12 +497,11 @@ const CompanyManagement = () => {
   const fetchCompanyList = async () => {
     setLoading(true);
     try {
-      // 내 제휴 비즈니스 업체 목록 조회 연동 API
       const res = await axiosInstance.get('/companies/my-list');
       setCompanies(res.data?.data || []);
     } catch (e) {
       console.error(e);
-      // Fallback 더미 명세 바인딩
+      // Fallback 더미 카드 바인딩
       setCompanies([
         { id: 'c-1', name: '(주)트립메이트 투어 오사카', businessNumber: '124-81-99234', email: 'osaka_tour@tripmate.com', status: 'APPROVED' },
         { id: 'c-2', name: '시부야 가이드 컴퍼니', businessNumber: '502-22-11405', email: 'shibuya_guide@naver.com', status: 'PENDING' }
@@ -293,7 +567,6 @@ const CompanyManagement = () => {
               등록 완료 승인된 제휴 업체 비즈니스 카드가 존재하지 않습니다.
             </div>
         ) : (
-            /* 업체 리스트 세련된 카드 그리드화 명세 */
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {companies.map((comp) => (
                   <div key={comp.id} className="bg-white border border-[#E5E7EB] rounded-[16px] p-5 space-y-4 hover:border-slate-400 transition-all shadow-sm">
@@ -322,16 +595,14 @@ const CompanyManagement = () => {
   );
 };
 
-// ==========================================
+// =========================================================================
 // 3. 미니멀 프로필 사이드바 파트
-// ==========================================
+// =========================================================================
 const MyPageSidebar = ({ userData }) => {
   const avatarUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(userData?.name || 'user')}&backgroundColor=f3f4f6`;
   const location = useLocation();
   const navigate = useNavigate();
   const isActive = (path) => location.pathname.endsWith(path);
-
-  // 💡 요구사항 반영: SELLER 권한 분석용 Boolean 지표 수립
   const isSeller = userData?.role === 'SELLER';
 
   const handleLogout = async () => {
@@ -361,7 +632,6 @@ const MyPageSidebar = ({ userData }) => {
             <span>일정 및 호스트 관리</span>
           </Link>
 
-          {/* 💡 요구사항 반영: user의 role이 SELLER 일 때만 '내 업체 관리' 메뉴 탭 노출 제어 */}
           {isSeller && (
               <Link to="/profile/company" className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs font-black transition-all ${isActive('company') ? 'bg-[#F0F7FF] text-[#007AFF]' : 'text-gray-500 hover:bg-slate-50'}`}>
                 <Building2 size={15} className={isActive('company') ? 'text-[#007AFF]' : 'text-gray-400'} />
@@ -379,10 +649,6 @@ const MyPageSidebar = ({ userData }) => {
       </aside>
   );
 };
-
-// ==========================================
-// 4. 메인 마이페이지 마스터 허브 컴포넌트
-// ==========================================
 export const MyPageView = () => {
   const { user } = useProfile();
 

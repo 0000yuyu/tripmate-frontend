@@ -364,8 +364,7 @@ export const MatchingView = () => {
       await axiosInstance.patch(`matching/${meetupItem.matchingId}/approval`);
       setSelectedMeetup(meetupItem);
       setIsSuccessModalOpen(true);
-      setMeetUps(prev => prev.filter(item => item.matchingId !== meetupItem.matchingId));
-      if (currentCardIdx > 0) setCurrentCardIdx(prev => prev - 1);
+      setMeetUps([]);
       message.success("매칭 요청 수락이 완료되었습니다.");
     } catch (e) {
       message.error("매칭 수락 처리 중 오류가 발생했습니다.");
@@ -428,7 +427,10 @@ export const MatchingView = () => {
         };
 
         eventSourceRef.current.addEventListener('matching', (e) => addMatchingList(JSON.parse(e.data)));
-        eventSourceRef.current.addEventListener('matching-close', () => disconnectSSE());
+        eventSourceRef.current.addEventListener('matching-close', () => {
+          message.success("매칭 성사가 되었습니다.")
+          disconnectSSE();
+        });
         
       } catch (e) {
         console.log(e);
@@ -599,7 +601,6 @@ export const MatchingView = () => {
                     <p className="text-[11px] font-medium text-gray-400 mt-0.5">상단 '매칭 시작' 단추를 눌러 작동시키세요.</p>
                   </div>
               ) : (
-                  /* 스르륵 플래시카드 슬라이더 껍데기 */
                   <div className="w-full max-w-[360px] flex flex-col items-center space-y-6">
                     <div className="w-full aspect-[4/5] relative flex items-center justify-center overflow-hidden">
                       <AnimatePresence mode="wait">
@@ -684,30 +685,8 @@ export const MatchingView = () => {
                     </div>
                   </div>
               )}
-
             </div>
           </div>
-
-          {/* 오른쪽 맵 뷰 지표 구역 */}
-          <div className="w-full lg:w-[52%] h-[320px] lg:h-auto bg-gray-50 relative shrink-0">
-            <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1m2!1s0x0%3A0x0!2zNDDCsDQzJzM0LjIiTiA3M8KwNTYnMTIuMiJX!1m2!1m3!1m2!1s0x0%3A0x0!2zNDDCsDQzJzM0LjIiTiA3M8KwNTYnMTIuMiJX!5e0!3m2!1sko!2skr!4v1700000000000!5m2!1sko!2skr" className="w-full h-full border-none opacity-80" title="Brooklyn Map" />
-            <div className="absolute inset-0 bg-[#007AFF]/5 pointer-events-none" />
-            <AnimatePresence>
-              {filteredMeetups.map((_, idx) => (
-                  <motion.div
-                      key={idx}
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      style={{ top: `${25 + idx * 12}%`, left: `${35 + (idx % 3) * 15}%` }}
-                      className="absolute w-7 h-7 bg-red-500 rounded-full border-4 border-white shadow-md flex items-center justify-center cursor-pointer z-20"
-                  >
-                    <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                  </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-
         </div>
       </div>
   );

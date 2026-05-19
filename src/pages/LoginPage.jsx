@@ -30,21 +30,6 @@ export default function LoginPage() {
       const accessToken = await login(email, password);
 
       if (accessToken) {
-        // 푸시 알림 토큰 등록 로직
-        try {
-          const deviceData = await requestForToken();
-          if (deviceData) {
-            const response = await axiosInstance.post(
-                "/notifications/tokens/me",
-                { ...deviceData, channelType: "PUSH" },
-                { headers: { Authorization: `Bearer ${accessToken}` } }
-            );
-            console.log("토큰 갱신 성공 : ", response);
-          }
-        } catch (e) {
-          console.error("푸시 토큰 등록 실패:", e);
-        }
-
         // 로그인 성공 시 모달 상태 세팅
         setModalType('SUCCESS');
         setModalTitle('로그인 성공');
