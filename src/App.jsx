@@ -17,7 +17,7 @@ import PaymentPage from "@pages/PaymentPage.jsx";
 import HomeLandingPage from "@components/HomeView.jsx";
 import MemberShipPage from "@pages/MemberShipPage.jsx";
 import PlanCreatePage from "@pages/PlanPage.jsx";
-import {message} from "antd";
+import {message, notification} from "antd";
 
 function RequireAuth() {
 	return isLoggedIn() ? <Outlet/> : <Navigate to="/login" replace/>;
@@ -30,25 +30,22 @@ function AnonymousOnly() {
 export default function App() {
 
   useEffect(() => {
-    const token = getAccessToken();
 
-    // 1. [자동 로그인 대응] 앱 진입 시 이미 로그인된 유저라면 최신 토큰 서버 동기화
-    if (token) {
-      registerPushToken(token);
-    }
-
-    // 2. [포그라운드 리스너] 화면이 켜져 있을 때(포그라운드) 실시간 푸시 수신 감지
     const unsubscribe = onMessageListener((payload) => {
       console.log("🔥 포그라운드 알림 수신 성공:", payload);
 
-      // 서비스 워커나 서버 페이로드 구조에 맞춰 타이틀과 바디 추출
       const title = payload.notification?.title || payload.data?.title || "새로운 알림";
       const body = payload.notification?.body || payload.data?.body || "메시지가 도착했습니다.";
 
-      message.info(title,body);
+      // 2. antd notification 실행
+      notification.info({
+        message: title,         // 굵은 글씨로 들어갈 제목
+        description: body,     // 일반 글씨로 들어갈 본문 내용
+        placement: 'topRight', // 알림이 뜰 위치 (topLeft, topRight, bottomLeft, bottomRight 가능)
+        duration: 4.5,         // 몇 초 뒤에 자동으로 사라질지 설정 (0으로 하면 수동으로 닫을 때까지 안 사라짐)
+      });
     });
 
-    // 3. 컴포넌트 언마운트 시 메모리 누수 방지를 위해 리스너 구독 해제
     return () => {
       if (typeof unsubscribe === 'function') {
         unsubscribe();

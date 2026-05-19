@@ -1,6 +1,7 @@
 // 기기 아이디 가져오기 (없으면 생성)
 import {getToken, onMessage} from "firebase/messaging";
 import {messaging} from "../utils/firebase";
+import axiosInstance from "@utils/axiosInstance.js";
 
 export const onMessageListener = (callback) => {
   // 포그라운드 메시지 수신 시 실행될 콜백 등록

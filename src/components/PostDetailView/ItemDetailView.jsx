@@ -120,7 +120,7 @@ export const ItemDetailView = ({
                       </div>
                       <div className="flex gap-2 pt-2 border-t border-slate-50">
                         <button onClick={onViewProduct} className="flex-1 py-2 border border-slate-200 text-xs font-bold text-slate-600 rounded">상세보기</button>
-                        <button onClick={onOrderProduct} className="flex-1 py-2 bg-[#007AFF] text-xs font-bold text-white rounded">구매하기</button>
+                        <button onClick={onOrderProduct} className="flex-1 py-2 bg-[#007AFF] text-xs font-bold text-white rounded" >구매하기</button>
                       </div>
                     </div>
                 ) : (

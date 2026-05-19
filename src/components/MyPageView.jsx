@@ -20,7 +20,8 @@ import {
   ChevronDown,
   ArrowUp,
   ArrowDown,
-  ExternalLink
+  ExternalLink,
+  ShoppingBag
 } from 'lucide-react';
 import { useProfile } from "@hooks/userContext.jsx";
 import axiosInstance from "@/utils/axiosInstance";
@@ -49,7 +50,7 @@ const useNotionTable = (rawData) => {
 
   // 특정 열의 고유한 유니크 상태 목록 추출 (드롭다운 옵션 자동 생성용)
   const getUniqueValues = (field) => {
-    const values = rawData.map(item => item[field]).filter(Boolean);
+    const values = rawData.map(item => item[field]).filter(val => val !== undefined && val !== null);
     return [...new Set(values)];
   };
 
@@ -137,6 +138,14 @@ const statusConfig = {
   PAYMENT_CANCELLED: { text: '결제 취소', className: 'bg-rose-50 text-rose-400 border-rose-100' },
 };
 
+// 💡 [추가] 주문/영수증 도메인 특화 공통 상태 맵핑 설정
+const orderStatusConfig = {
+  PENDING: { text: '결제 대기', className: 'bg-amber-50 text-amber-600 border-amber-100' },
+  COMPLETED: { text: '결제 완료', className: 'bg-emerald-50 text-[#00C853] border-emerald-100' },
+  CANCELLED: { text: '주문 취소', className: 'bg-red-50 text-red-400 border-red-100' },
+  REFUNDED: { text: '환불 완료', className: 'bg-gray-100 text-gray-400 border-gray-200' }
+};
+
 // =========================================================================
 // 1. 노션 데이터베이스 스타일 일정 / 호스트 명세 관리 패널
 // =========================================================================
@@ -145,16 +154,13 @@ const HostManagement = () => {
   const [rawData, setRawData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // 데이터 가공 및 백엔드 응답 평탄화(Flattening) 함수
   const fetchTableData = async () => {
     setLoading(true);
     try {
       if (subTab === 'hosting') {
-        // [호스트 모드]: 신청받은 참여 요청 조회 API
         const res = await axiosInstance.get('/plans/participations/received-requests');
         const contentList = res.data?.data?.content || res.data?.data || [];
 
-        // 💡 계층형 구조(Plan -> PlanUnits -> Applicants)를 1차원 이용자 목록으로 완전 분해 평탄화!
         const flattened = [];
         contentList.forEach(plan => {
           if (plan.planUnits && plan.planUnits.length > 0) {
@@ -178,11 +184,9 @@ const HostManagement = () => {
         });
         setRawData(flattened);
       } else {
-        // [게스트 모드]: 내가 신청한 일정 조회 API
         const res = await axiosInstance.get('/plans/participations/my-requests');
         const contentList = res.data?.data?.content || res.data?.data || [];
 
-        // 게스트 데이터 구조에 맞춘 유연한 매핑 파이프라인
         const flattenedApplied = contentList.map(item => ({
           participationId: item.participationId || item.id,
           planId: item.planId,
@@ -205,25 +209,22 @@ const HostManagement = () => {
     fetchTableData();
   }, [subTab]);
 
-  // 호스트 권한 수락 / 거절 액션 핸들러
-  const handleAction = async (planId,unitPlanId,participationId, actionType) => {
+  const handleAction = async (planId, unitPlanId, participationId, actionType) => {
     try {
-      await axiosInstance.patch(`/plans/${planId}/unit-plans/${unitPlanId}/participations/${participationId}/status`,{
-        status : actionType
+      await axiosInstance.patch(`/plans/${planId}/unit-plans/${unitPlanId}/participations/${participationId}/status`, {
+        status: actionType
       });
       message.success(`신청 건에 대해 ${actionType === 'APPROVED' ? '수락' : '거절'} 처리가 완료되었습니다.`);
-      fetchTableData(); // 처리 후 리스트 즉시 리프레시 동기화
+      fetchTableData();
     } catch (e) {
       message.error("요청 처리 조작 중 예외가 발생했습니다.");
     }
   };
 
-  // 커스텀 훅에 데이터 주입하여 노션식 연산 핸들러 추출
   const table = useNotionTable(rawData);
 
   return (
       <div className="space-y-5 animate-in fade-in duration-200 text-left">
-        {/* 미니멀 제어 토글 바 */}
         <div className="flex bg-[#F3F4F6] p-1 rounded-xl max-w-[300px]">
           <button
               onClick={() => setSubTab('hosting')}
@@ -239,7 +240,6 @@ const HostManagement = () => {
           </button>
         </div>
 
-        {/* 상단 현재 테이블 메타 정보 가이드 랙 */}
         <div className="flex items-center justify-between text-xs text-gray-400 px-1">
           <span className="font-semibold flex items-center gap-1"><SlidersHorizontal size={12}/> 각 열 헤더를 클릭하여 정렬 및 독립 필터를 지정하세요.</span>
           <span className="font-bold text-[#333333]">정렬 결과: {table.processedData.length}건 산출</span>
@@ -253,15 +253,12 @@ const HostManagement = () => {
               정리된 실시간 명세 항목이 존재하지 않습니다.
             </div>
         ) : (
-            /* 노션 데이터베이스 보드 그리드 마크업 완벽 입히기 */
             <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm overflow-visible overflow-x-auto relative">
               <table className="w-full text-left text-xs min-w-[850px] table-fixed">
                 <thead className="bg-[#F9FAFB] border-b border-[#E5E7EB] text-gray-500 font-bold select-none">
                 {subTab === 'hosting' ? (
                     <tr>
                       <th className="px-4 py-3 w-12 text-center">#</th>
-
-                      {/* 플랜 이름 헤더 */}
                       <th className="px-4 py-3 relative overflow-visible w-1/4">
                         <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'planTitle' ? null : 'planTitle')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
                           <span>플랜 이름</span> <ChevronDown size={12}/>
@@ -270,8 +267,6 @@ const HostManagement = () => {
                             <HeaderFilterDrawer columnKey="planTitle" tableContext={table} title="플랜 필터" />
                         )}
                       </th>
-
-                      {/* 플랜 유닛 이름 헤더 */}
                       <th className="px-4 py-3 relative overflow-visible w-1/4">
                         <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'unitTitle' ? null : 'unitTitle')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
                           <span>연동 유닛 일정</span> <ChevronDown size={12}/>
@@ -280,8 +275,6 @@ const HostManagement = () => {
                             <HeaderFilterDrawer columnKey="unitTitle" tableContext={table} title="유닛 코스 필터" />
                         )}
                       </th>
-
-                      {/* 신청자 유저명 헤더 */}
                       <th className="px-4 py-3 relative overflow-visible w-1/5">
                         <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'applicantName' ? null : 'applicantName')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
                           <span>이용자 목록</span> <ChevronDown size={12}/>
@@ -290,8 +283,6 @@ const HostManagement = () => {
                             <HeaderFilterDrawer columnKey="applicantName" tableContext={table} title="이용자 검색" />
                         )}
                       </th>
-
-                      {/* 참여 상태 헤더 */}
                       <th className="px-4 py-3 relative overflow-visible w-28 text-center">
                         <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'participationStatus' ? null : 'participationStatus')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
                           <span>승인 상태</span> <ChevronDown size={12}/>
@@ -300,14 +291,11 @@ const HostManagement = () => {
                             <HeaderFilterDrawer columnKey="participationStatus" tableContext={table} title="상태 분기" />
                         )}
                       </th>
-
                       <th className="px-4 py-3 text-center w-28">액션 조작</th>
                     </tr>
                 ) : (
                     <tr>
                       <th className="px-4 py-3 w-12 text-center">#</th>
-
-                      {/* 참여 플랜 이름 헤더 */}
                       <th className="px-4 py-3 relative overflow-visible w-1/3">
                         <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'planTitle' ? null : 'planTitle')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
                           <span>참여 플랜 명세</span> <ChevronDown size={12}/>
@@ -316,8 +304,6 @@ const HostManagement = () => {
                             <HeaderFilterDrawer columnKey="planTitle" tableContext={table} title="플랜 필터" />
                         )}
                       </th>
-
-                      {/* 플랜 유닛 명세 헤더 */}
                       <th className="px-4 py-3 relative overflow-visible w-1/3">
                         <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'unitTitle' ? null : 'unitTitle')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
                           <span>매핑 유닛 상세</span> <ChevronDown size={12}/>
@@ -326,8 +312,6 @@ const HostManagement = () => {
                             <HeaderFilterDrawer columnKey="unitTitle" tableContext={table} title="유닛 코스 필터" />
                         )}
                       </th>
-
-                      {/* 내 참여 상태 헤더 */}
                       <th className="px-4 py-3 relative overflow-visible w-32 text-center">
                         <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'participationStatus' ? null : 'participationStatus')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
                           <span>내 상태</span> <ChevronDown size={12}/>
@@ -336,7 +320,6 @@ const HostManagement = () => {
                             <HeaderFilterDrawer columnKey="participationStatus" tableContext={table} title="상태 분기" />
                         )}
                       </th>
-
                       <th className="px-4 py-3 text-center w-24">링크 이동</th>
                     </tr>
                 )}
@@ -345,29 +328,28 @@ const HostManagement = () => {
                 {table.processedData.map((item, index) => (
                     <tr key={item.participationId || index} className="hover:bg-slate-50/60 transition-colors">
                       <td className="px-4 py-3.5 text-center font-bold text-gray-400">{index + 1}</td>
-
                       {subTab === 'hosting' ? (
                           <>
                             <td className="px-4 py-3.5 font-black text-slate-800 truncate">{item.planTitle}</td>
                             <td className="px-4 py-3.5 text-slate-500 truncate">{item.unitTitle}</td>
                             <td className="px-4 py-3.5 font-bold text-slate-700 truncate">{item.applicantName}</td>
                             <td className="px-4 py-3.5 text-center">
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-black ${statusConfig[item.participationStatus].className}`}>
-                                {statusConfig[item.participationStatus].text}
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-black ${statusConfig[item.participationStatus]?.className || 'bg-gray-50'}`}>
+                                {statusConfig[item.participationStatus]?.text || item.participationStatus}
                               </span>
                             </td>
                             <td className="px-4 py-3.5 text-center">
                               {item.participationStatus === 'REQUESTED' ? (
                                   <div className="flex items-center justify-center gap-1.5">
                                     <button
-                                        onClick={() => handleAction(item.planId,item.planUnitId,item.participationId, 'APPROVED')}
+                                        onClick={() => handleAction(item.planId, item.planUnitId, item.participationId, 'APPROVED')}
                                         className="p-1 bg-[#007AFF] text-white rounded hover:bg-blue-600 transition-colors"
                                         title="수락하기"
                                     >
                                       <Check size={11} strokeWidth={3} />
                                     </button>
                                     <button
-                                        onClick={() => handleAction(item.planId,item.planUnitId,item.participationId, 'REJECTED')}
+                                        onClick={() => handleAction(item.planId, item.planUnitId, item.participationId, 'REJECTED')}
                                         className="p-1 bg-white border border-slate-200 text-gray-400 rounded hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors"
                                         title="거절하기"
                                     >
@@ -392,7 +374,7 @@ const HostManagement = () => {
                             </td>
                             <td className="px-4 py-3.5 text-center">
                               <Link
-                                  to={`/products/detail/${item.planId || 'view'}`}
+                                  to={`/plans/${item.planId || 'view'}`}
                                   className="inline-flex items-center justify-center gap-1 text-[11px] font-bold text-[#007AFF] hover:underline"
                               >
                                 <span>이동</span>
@@ -401,6 +383,142 @@ const HostManagement = () => {
                             </td>
                           </>
                       )}
+                    </tr>
+                ))}
+                </tbody>
+              </table>
+            </div>
+        )}
+      </div>
+  );
+};
+
+// =========================================================================
+// 💡 [신규 추가] 2. 주문 결제 내역 명세 보드 패널 (마이페이지 연동용)
+// =========================================================================
+const OrderManagement = () => {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      // 💡 실제 통합 통신용 API 바인딩 구조 채택
+      const res = await axiosInstance.get('/orders/me');
+      setOrders(res.data?.data?.content || []);
+    } catch (e) {
+      console.error("주문 목록 로딩 익셉션", e);
+      // Fallback 혹은 에러 대응 메시지
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const table = useNotionTable(orders);
+
+  // 국가/도시별 화폐 출력 단위를 반영하는 정밀 가격 포맷터 함수
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(value);
+  };
+
+  return (
+      <div className="space-y-5 animate-in fade-in duration-200 text-left">
+        <div className="border-b border-gray-100 pb-4">
+          <h3 className="text-base font-black text-[#333333]">주문 및 결제 확인 명세</h3>
+        </div>
+
+        <div className="flex items-center justify-between text-xs text-gray-400 px-1">
+          <span className="font-semibold flex items-center gap-1">
+            <SlidersHorizontal size={12}/> 헤더 필드를 클릭해 동적 정렬 및 예약 필터를 구성하세요.
+          </span>
+          <span className="font-bold text-[#333333]">조회 내역: {table.processedData.length}건</span>
+        </div>
+
+        {loading ? (
+            <div className="flex justify-center py-20"><Loader2 className="animate-spin text-[#007AFF]" size={24} /></div>
+        ) : table.processedData.length === 0 ? (
+            <div className="py-20 text-center border border-dashed border-gray-200 rounded-2xl text-gray-400 text-xs font-medium flex flex-col items-center gap-2 bg-white">
+              <ShoppingBag size={24} className="opacity-30" />
+              결제 혹은 예약 처리 완료된 주문 내역서가 없습니다.
+            </div>
+        ) : (
+            <div className="bg-white border border-[#E5E7EB] rounded-xl shadow-sm overflow-visible overflow-x-auto relative">
+              <table className="w-full text-left text-xs min-w-[900px] table-fixed">
+                <thead className="bg-[#F9FAFB] border-b border-[#E5E7EB] text-gray-500 font-bold select-none">
+                <tr>
+                  <th className="px-4 py-3 w-12 text-center">#</th>
+                  {/* 상품명 필드 헤더 */}
+                  <th className="px-4 py-3 relative overflow-visible w-1/3">
+                    <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'productName' ? null : 'productName')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
+                      <span>상품 및 투어 코스명</span> <ChevronDown size={12}/>
+                    </div>
+                    {table.activeDropdown === 'productName' && (
+                        <HeaderFilterDrawer columnKey="productName" tableContext={table} title="상품 필터" />
+                    )}
+                  </th>
+                  {/* 체험일 필드 헤더 */}
+                  <th className="px-4 py-3 relative overflow-visible w-28 text-center">
+                    <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'experienceDate' ? null : 'experienceDate')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
+                      <span>예약 체험일</span> <ChevronDown size={12}/>
+                    </div>
+                    {table.activeDropdown === 'experienceDate' && (
+                        <HeaderFilterDrawer columnKey="experienceDate" tableContext={table} title="날짜 필터" />
+                    )}
+                  </th>
+                  {/* 수량 필드 헤더 */}
+                  <th className="px-4 py-3 relative overflow-visible w-20 text-center">
+                    <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'totalQuantity' ? null : 'totalQuantity')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
+                      <span>인원/수량</span> <ChevronDown size={12}/>
+                    </div>
+                    {table.activeDropdown === 'totalQuantity' && (
+                        <HeaderFilterDrawer columnKey="totalQuantity" tableContext={table} title="수량 필터" />
+                    )}
+                  </th>
+                  {/* 총액 필드 헤더 */}
+                  <th className="px-4 py-3 relative overflow-visible w-32 text-right pr-6">
+                    <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'totalPrice' ? null : 'totalPrice')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors justify-end gap-1">
+                      <span>결제 총액</span> <ChevronDown size={12}/>
+                    </div>
+                    {table.activeDropdown === 'totalPrice' && (
+                        <HeaderFilterDrawer columnKey="totalPrice" tableContext={table} title="결제액 필터" />
+                    )}
+                  </th>
+                  {/* 주문 결제 상태 헤더 */}
+                  <th className="px-4 py-3 relative overflow-visible w-28 text-center">
+                    <div onClick={() => table.setActiveDropdown(table.activeDropdown === 'orderStatus' ? null : 'orderStatus')} className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded transition-colors">
+                      <span>주문 상태</span> <ChevronDown size={12}/>
+                    </div>
+                    {table.activeDropdown === 'orderStatus' && (
+                        <HeaderFilterDrawer columnKey="orderStatus" tableContext={table} title="상태 필터" />
+                    )}
+                  </th>
+                </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-[#333333] font-medium">
+                {table.processedData.map((order, index) => (
+                    <tr key={order.orderId || index} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="px-4 py-3.5 text-center font-bold text-gray-400">{index + 1}</td>
+                      <td className="px-4 py-3.5 font-black text-slate-800 truncate">
+                        <div className="flex flex-col gap-0.5">
+                          <span>{order.productName}</span>
+                          <span className="text-[10px] font-mono text-gray-300 font-normal tracking-tight">{order.orderId}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-center font-mono text-slate-500">{order.experienceDate}</td>
+                      <td className="px-4 py-3.5 text-center font-bold text-slate-600">{order.totalQuantity}개</td>
+                      <td className="px-4 py-3.5 text-right pr-6 font-mono font-black text-slate-900">
+                        {formatCurrency(order.totalPrice)}
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-black border ${orderStatusConfig[order.orderStatus]?.className || 'bg-gray-50 text-gray-500 border-gray-100'}`}>
+                          {orderStatusConfig[order.orderStatus]?.text || order.orderStatus}
+                        </span>
+                      </td>
                     </tr>
                 ))}
                 </tbody>
@@ -433,7 +551,6 @@ const HeaderFilterDrawer = ({ columnKey, tableContext, title }) => {
           ref={dropdownRef}
           className="absolute top-full left-0 mt-1.5 w-[210px] bg-white border border-gray-200 rounded-xl shadow-xl z-50 p-3 text-left font-sans font-medium text-[#333333]"
       >
-        {/* 정렬 유틸 액션 랙 */}
         <div className="space-y-1 pb-2 border-b border-gray-100 text-[11px]">
           <button
               onClick={() => toggleSort(columnKey)}
@@ -449,7 +566,6 @@ const HeaderFilterDrawer = ({ columnKey, tableContext, title }) => {
           </button>
         </div>
 
-        {/* 상태 선택 필터 체크박스 랙 */}
         <div className="pt-2">
           <div className="flex items-center justify-between px-2 mb-1.5">
             <span className="text-[10px] font-black text-gray-400 uppercase tracking-tight">{title}</span>
@@ -474,7 +590,9 @@ const HeaderFilterDrawer = ({ columnKey, tableContext, title }) => {
                             onChange={() => handleFilterSelect(columnKey, option)}
                             className="rounded border-gray-300 text-[#007AFF] focus:ring-[#007AFF] w-3 h-3"
                         />
-                        <span className="truncate flex-1">{option}</span>
+                        <span className="truncate flex-1">
+                          {columnKey === 'orderStatus' ? (orderStatusConfig[option]?.text || option) : option}
+                        </span>
                       </label>
                   );
                 })
@@ -486,7 +604,7 @@ const HeaderFilterDrawer = ({ columnKey, tableContext, title }) => {
 };
 
 // =========================================================================
-// 2. 내 업체 목록 관리 패널
+// 3. 내 업체 목록 관리 패널
 // =========================================================================
 const CompanyManagement = () => {
   const [companies, setCompanies] = useState([]);
@@ -497,15 +615,10 @@ const CompanyManagement = () => {
   const fetchCompanyList = async () => {
     setLoading(true);
     try {
-      const res = await axiosInstance.get('/companies/my-list');
-      setCompanies(res.data?.data || []);
+      const res = await axiosInstance.get('/companies/me');
+      setCompanies(res.data?.data.content || []);
     } catch (e) {
       console.error(e);
-      // Fallback 더미 카드 바인딩
-      setCompanies([
-        { id: 'c-1', name: '(주)트립메이트 투어 오사카', businessNumber: '124-81-99234', email: 'osaka_tour@tripmate.com', status: 'APPROVED' },
-        { id: 'c-2', name: '시부야 가이드 컴퍼니', businessNumber: '502-22-11405', email: 'shibuya_guide@naver.com', status: 'PENDING' }
-      ]);
     } finally {
       setLoading(false);
     }
@@ -596,7 +709,7 @@ const CompanyManagement = () => {
 };
 
 // =========================================================================
-// 3. 미니멀 프로필 사이드바 파트
+// 4. 미니멀 프로필 사이드바 파트
 // =========================================================================
 const MyPageSidebar = ({ userData }) => {
   const avatarUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(userData?.name || 'user')}&backgroundColor=f3f4f6`;
@@ -632,6 +745,12 @@ const MyPageSidebar = ({ userData }) => {
             <span>일정 및 호스트 관리</span>
           </Link>
 
+          {/* 💡 [사이드바 링크 추가] 주문 및 결제 내역 라우터 링크 */}
+          <Link to="/profile/orders" className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs font-black transition-all ${isActive('orders') ? 'bg-[#F0F7FF] text-[#007AFF]' : 'text-gray-500 hover:bg-slate-50'}`}>
+            <ShoppingBag size={15} className={isActive('orders') ? 'text-[#007AFF]' : 'text-gray-400'} />
+            <span>주문 및 결제 내역</span>
+          </Link>
+
           {isSeller && (
               <Link to="/profile/company" className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs font-black transition-all ${isActive('company') ? 'bg-[#F0F7FF] text-[#007AFF]' : 'text-gray-500 hover:bg-slate-50'}`}>
                 <Building2 size={15} className={isActive('company') ? 'text-[#007AFF]' : 'text-gray-400'} />
@@ -643,12 +762,13 @@ const MyPageSidebar = ({ userData }) => {
 
           <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs font-bold text-red-400 hover:bg-red-50/50 transition-all text-left">
             <LogOut size={15} className="text-red-300" />
-            <span>플랫폼 로그아웃</span>
+            <span>로그아웃</span>
           </button>
         </nav>
       </aside>
   );
 };
+
 export const MyPageView = () => {
   const { user } = useProfile();
 
@@ -661,6 +781,8 @@ export const MyPageView = () => {
             <Route path="/" element={<Outlet />}>
               <Route index element={<Navigate to="host" replace />} />
               <Route path="host" element={<HostManagement />} />
+              {/* 💡 [라우트 추가] 주문내역 컴포넌트 맵핑 */}
+              <Route path="orders" element={<OrderManagement />} />
               <Route path="company" element={<CompanyManagement />} />
             </Route>
           </Routes>

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronRight, Loader2 } from 'lucide-react';
@@ -17,12 +17,13 @@ import { ProductManagementView } from "@components/ProductManagementView.jsx";
 import { ItineraryView } from "@components/PostDetailView/ItineraryView.jsx";
 import { message } from "antd";
 import { useProfile } from "@hooks/userContext.jsx";
-import {planService} from "@/services/index.js";
+import { planService } from "@/services/index.js";
 
 export default function PlanDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [post, setPost] = useState(null);
+  const [loading, setLoading] = useState(true); // 로딩 상태 추가
 
   // 'all' | 'edit' | 'manage' | 'product_manage' | 'unit_view'
   const [selectedMenuItem, setSelectedMenuItem] = useState('all');
@@ -33,21 +34,35 @@ export default function PlanDetailPage() {
 
   const { user } = useProfile();
 
-  useEffect(() => {
-    if (id) {
-      const loadPost = async () => {
-        try {
-          const response = await axiosInstance.get(`/plans/${id}`);
-          setPost(response.data?.data || response.data);
-        } catch (error) {
-          console.error("데이터 로드 실패", error);
-        }
-      };
-      loadPost();
-    }
-  }, [id]);
+  // 🔄 데이터를 새로고침하는 함수 (useCallback으로 감싸 효율화)
+  const refreshData = useCallback(async () => {
+    if (!id) return;
+    try {
+      const response = await axiosInstance.get(`/plans/${id}`);
+      const freshPost = response.data?.data || response.data;
+      setPost(freshPost);
 
-  if (!post) {
+      // 현재 유닛 상세보기를 하고 있다면, 유닛의 최신 데이터도 함께 동기화
+      if (selectedItem) {
+        const updatedItem = freshPost.planUnits?.find(unit => unit.id === selectedItem.id);
+        if (updatedItem) {
+          setSelectedItem(updatedItem);
+        }
+      }
+    } catch (error) {
+      console.error("데이터 로드 실패", error);
+      message.error("최신 데이터를 가져오는 데 실패했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  }, [id, selectedItem]);
+
+  // 첫 로드시 데이터 로킹
+  useEffect(() => {
+    refreshData();
+  }, [id]); // 첫 렌더링 및 ID 변경시에만 작동
+
+  if (loading) {
     return (
         <div className="flex items-center justify-center min-h-[500px]">
           <Loader2 size={36} className="animate-spin text-[#007AFF]" />
@@ -82,7 +97,7 @@ export default function PlanDetailPage() {
           break;
         }
       }
-      console.log("user",user.id,"host",hostUserId)
+      console.log("user", user.id, "host", hostUserId)
 
       if (!hostUserId || hostUserId !== user?.id) {
         message.error("🔒 관리자 페이지는 호스트만 접근할 수 있습니다.");
@@ -92,26 +107,32 @@ export default function PlanDetailPage() {
     }
   };
 
+  // 1. 투어 패키지 수정 완료 후
   const handleUpdate = async (payload) => {
     try {
       await axiosInstance.put(`/plans/${id}`, payload);
       message.success("✈️ 투어 패키지 변경사항이 반영되었습니다.");
+
+      // 만약 수정 후 목록으로 가야 한다면 그대로 두고, 상세 페이지에 남는다면 데이터 리프레시를 합니다.
+      // 여기서는 기존 기획인 목록으로 이동 단계를 유지하되 최신화를 보장합니다.
       navigate('/plans');
     } catch (e) {
       message.error("수정 요청 중 통신 오류가 발생했습니다.");
     }
   };
 
+  // 2. 코스 참여 신청 완료 후 🔄 리프레시 적용
   const handleJoinUnit = async () => {
     try {
-      // 단위 일정 참여 API 신청부
-      await planService.applyToUnitPlan(id,selectedItem.id);
+      await planService.applyToUnitPlan(id, selectedItem.id);
+      window.location.reload();
       message.success("코스 참여 신청이 완료되었습니다.");
     } catch (e) {
       message.error("참여 신청 중 오류가 발생했습니다.");
     }
   };
 
+  // 3. 주문 생성 완료 후
   const handleOrder = async () => {
     if (!selectedItem?.product) return;
     try {
@@ -126,9 +147,26 @@ export default function PlanDetailPage() {
       const response = await axiosInstance.post("/orders", orderData);
       const orderId = response.data?.data?.orderId;
       const amount = response.data?.data?.orderItems[0]?.price;
+
+      // 주문 완료 후에는 결제 페이지로 이동하므로 리프레시 대신 페이지 이동을 수행합니다.
       navigate(`/payment?backOrderId=${orderId}&amount=${amount}`);
     } catch (e) {
       message.error("주문 생성 중 통신 에러가 발생했습니다.");
+    }
+  };
+
+  // 4. 단위 일정 확정(혹은 처리) 완료 후 🔄 리프레시 적용
+  const handleConfirmUnit = async () => {
+    if (!selectedItem) return;
+    try {
+      // 기존에 없던 planId, unitPlanId 변수를 상위 state와 props 기준으로 안전하게 맵핑했습니다.
+      const response = await axiosInstance.patch(`/plans/${id}/unit-plans/${selectedItem.id}`);
+      console.log(response);
+      window.location.reload();
+      message.success("일정이 확정되었습니다.");
+    } catch (e) {
+      console.error(e);
+      message.error("일정 확정 처리 중 오류가 발생했습니다.");
     }
   };
 
@@ -149,7 +187,7 @@ export default function PlanDetailPage() {
 
         <div className="w-full flex flex-col lg:flex-row gap-10 items-stretch flex-1 min-h-0">
 
-          {/* 왼쪽 사이드바 (사이드바 내부에서 참여, 기록 메뉴는 제외 처리됨) */}
+          {/* 왼쪽 사이드바 */}
           <div className="w-full lg:w-[320px] shrink-0 flex flex-col overflow-y-auto scrollbar-hide">
             <PostDetailSidebar
                 post={post}
@@ -177,6 +215,7 @@ export default function PlanDetailPage() {
                           onJoinUnit={handleJoinUnit}
                           onViewProduct={() => navigate(`/products/${selectedItem?.product?.productId}`)}
                           onOrderProduct={handleOrder}
+                          onConfirmUnit={handleConfirmUnit}
                       />
                   ) : selectedMenuItem === 'edit' ? (
                       <PlanFormView mode="edit" initialData={post} onSave={handleUpdate} />

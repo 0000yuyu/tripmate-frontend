@@ -44,32 +44,6 @@ export const ItineraryView = ({ plan, onUnitClick }) => {
     return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : timeStr;
   };
 
-  const getParticipationButtonState = (participants = []) => {
-    const myRegistration = participants.find(p => p.userId === currentUserId);
-
-    if (!myRegistration) {
-      return {
-        text: '이 코스만 참여',
-        disabled: false,
-        className: 'bg-[#007AFF] hover:bg-[#0062CC] text-white shadow-sm shadow-[#007AFF]/10 active:scale-97'
-      };
-    }
-
-    if (myRegistration.participationStatus === 'PARTICIPANT') {
-      return {
-        text: '참여 완료됨',
-        disabled: true,
-        className: 'bg-emerald-50 text-[#00C853] border border-emerald-200 cursor-not-allowed'
-      };
-    }
-
-    return {
-      text: '참여 대기 중',
-      disabled: true,
-      className: 'bg-gray-100 text-gray-400 border border-gray-200/40 cursor-not-allowed'
-    };
-  };
-
   return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 md:space-y-8">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide shrink-0">
@@ -135,8 +109,6 @@ export const ItineraryView = ({ plan, onUnitClick }) => {
                 <div className="absolute left-[9px] top-4 bottom-4 w-[1.5px] bg-gray-100" />
 
                 {currentDayData.map((item, idx) => {
-                  const btnState = getParticipationButtonState(item.participants);
-
                   return (
                       <div key={item.id || idx} className="relative group">
                         <span className="absolute left-[-21px] top-1.5 w-3.5 h-3.5 bg-[#007AFF] rounded-full border-2 border-white shadow-sm z-10" />
@@ -175,18 +147,6 @@ export const ItineraryView = ({ plan, onUnitClick }) => {
                                 <div className="h-full bg-[#007AFF] transition-all duration-300" style={{ width: `${Math.min(((item.currentCount || 0) / (item.maxCount || 10)) * 100, 100)}%` }} />
                               </div>
                             </div>
-
-                            <button
-                                type="button"
-                                disabled={btnState.disabled}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleParticipate(item.id);
-                                }}
-                                className={`w-full sm:w-auto px-5 py-2.5 rounded-xl font-bold text-xs transition-all text-center ${btnState.className}`}
-                            >
-                              {btnState.text}
-                            </button>
                           </div>
 
                         </div>

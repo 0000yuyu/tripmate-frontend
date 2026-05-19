@@ -4,7 +4,7 @@ import { Form, Input, Button } from 'antd';
 import { Mail, Lock } from 'lucide-react';
 import axios from "../utils/axiosInstance";
 import axiosInstance from "../utils/axiosInstance";
-import { requestForToken } from "../hooks/usePushManager";
+import {registerPushToken, requestForToken} from "../hooks/usePushManager";
 import LogoImg from '@/assets/images/logo.png';
 import CustomModal from "@components/CustomModal.jsx";
 import { setTokens } from "@utils/auth.js";
@@ -31,6 +31,7 @@ export default function LoginPage() {
 
       if (accessToken) {
         // 로그인 성공 시 모달 상태 세팅
+        await registerPushToken(accessToken);
         setModalType('SUCCESS');
         setModalTitle('로그인 성공');
         setModalContent('로그인에 성공하였습니다. 메인 페이지로 이동하시겠습니까?');
@@ -59,7 +60,7 @@ export default function LoginPage() {
   };
 
   return (
-      <div className='flex absolute top-0 left-0 right-0 bg-white z-[100] justify-center items-center h-full w-full p-4 overflow-y-auto'>
+      <div className='flex absolte top-0 left-0 right-0 bg-white z-[100] justify-center items-center h-full w-full p-4 overflow-y-auto'>
         <div className='flex flex-col gap-2 w-full max-w-[400px] items-center my-8'>
 
           {/* 로고 영역 */}

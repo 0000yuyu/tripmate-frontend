@@ -5,15 +5,18 @@ import App from './App.jsx'
 import {CompanyProfileProvider} from "./hooks/companyContext.jsx";
 import {ProfileProvider} from "./hooks/userContext.jsx";
 import {BrowserRouter} from 'react-router-dom';
+import {MatchingStreamProvider} from "@hooks/useStreamContext.jsx";
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
       <ProfileProvider>
-        <CompanyProfileProvider>
-          <BrowserRouter>
-            <App/>
-          </BrowserRouter>
-        </CompanyProfileProvider>
+        <MatchingStreamProvider>
+          <CompanyProfileProvider>
+            <BrowserRouter>
+              <App/>
+            </BrowserRouter>
+          </CompanyProfileProvider>
+        </MatchingStreamProvider>
       </ProfileProvider>
   </StrictMode>,
 )

@@ -460,9 +460,9 @@ export const PlanFormView = ({ initialData, onSave, mode = 'create' }) => {
         <div className="flex items-center justify-between border-b border-gray-100 pb-6">
           <div>
             <h2 className="text-2xl font-black text-[#333333]">
-              {mode === 'edit' ? '투어 일정 수정하기' : '새 가이드 매칭 일정 생성'}
+              {mode === 'edit' ? '일정 수정하기' : '일정 생성'}
             </h2>
-            <p className="text-xs text-gray-400 font-medium mt-1">유저들이 함께 참여하고 티켓을 연동할 수 있는 완성도 높은 패키지를 조율하세요.</p>
+            <p className="text-xs text-gray-400 font-medium mt-1">다른 사용자와 함께 할 수 있는 나만의 플랜을 완성해보세요</p>
           </div>
           <button
               onClick={handleFinalSubmit}
@@ -478,22 +478,22 @@ export const PlanFormView = ({ initialData, onSave, mode = 'create' }) => {
           {/* 왼쪽 섹션: 마스터 기초 명세 패널 */}
           <div className="lg:col-span-1 space-y-8">
             <section className="space-y-4">
-              <label className="text-xs font-black text-[#999999] uppercase tracking-widest px-1">01. 패키지 마스터 정보</label>
+              <label className="text-xs font-black text-[#999999] uppercase tracking-widest px-1">일정 정보</label>
               <div className="space-y-5 bg-white border border-[#E5E7EB] rounded-[24px] p-6 shadow-sm">
                 <div className="space-y-2">
-                  <p className="text-[11px] font-bold text-[#666666] ml-1">여행 플랜 대제목</p>
+                  <p className="text-[11px] font-bold text-[#666666] ml-1">여행 플랜 제목</p>
                   <input
                       type="text"
                       value={tripInfo.title}
                       onChange={(e) => setTripInfo({ ...tripInfo, title: e.target.value })}
-                      placeholder="예: [도쿄 감성] 시부야·긴자 가이드 투어"
+                      placeholder="플랜 제목을 입력하세요"
                       className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20"
                   />
                 </div>
 
                 {/* 📸 단일 이미지 업로드 UI 영역 */}
                 <div className="space-y-2">
-                  <p className="text-[11px] font-bold text-[#666666] ml-1">대표 이미지</p>
+                  <p className="text-[11px] font-bold text-[#666666] ml-1">이미지</p>
                   <div className="flex flex-wrap gap-4">
                     {imageFile ? (
                         <div className="relative w-24 h-24 rounded-2xl overflow-hidden group">
@@ -522,11 +522,11 @@ export const PlanFormView = ({ initialData, onSave, mode = 'create' }) => {
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-[11px] font-bold text-[#666666] ml-1">전체 루트 요약 서술</p>
+                  <p className="text-[11px] font-bold text-[#666666] ml-1">플랜 상세 설명</p>
                   <textarea
                       value={tripInfo.description}
                       onChange={(e) => setTripInfo({ ...tripInfo, description: e.target.value })}
-                      placeholder="투어 플랜의 특장점이나 규칙들을 상세 기입해 전달하세요."
+                      placeholder="플랜의 장점이나 규칙들을 상세 기입해 전달하세요."
                       rows={5}
                       className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none leading-relaxed"
                   />
@@ -558,7 +558,7 @@ export const PlanFormView = ({ initialData, onSave, mode = 'create' }) => {
           {/* 오른쪽 섹션: 타임라인 저니 박스 에디팅 존 */}
           <div className="lg:col-span-2 space-y-8">
             <div className="flex items-center justify-between px-1">
-              <label className="text-xs font-black text-[#999999] uppercase tracking-widest">02. 타임라인 세부 단위 코스 설계</label>
+              <label className="text-xs font-black text-[#999999] uppercase tracking-widest">플랜 타임라인 설계</label>
               <button
                   onClick={handleAddDay}
                   className="text-xs font-black text-[#007AFF] hover:underline flex items-center gap-1"
