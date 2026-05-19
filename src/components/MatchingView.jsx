@@ -162,12 +162,12 @@ const AcceptSuccessModal = ({ isOpen, onClose, meetupInfo }) => {
 const CreateMatchingModal = ({ isOpen, onClose, onSuccess }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [filterSettings, setFilterSettings] = useState({ ie: null, sn: null, tf: null, pj: null, smokingOption: "BOTH" });
+  const [filterSettings, setFilterSettings] = useState({ ie: null, sn: null, tf: null, pj: null, allowSmoking: false });
 
   useEffect(() => {
     if (!isOpen) {
       form.resetFields();
-      setFilterSettings({ ie: null, sn: null, tf: null, pj: null, smokingOption: "BOTH" });
+      setFilterSettings({ ie: null, sn: null, tf: null, pj: null, allowSmoking: false });
     }
   }, [isOpen, form]);
 
@@ -189,7 +189,7 @@ const CreateMatchingModal = ({ isOpen, onClose, onSuccess }) => {
         sn: filterSettings.sn,
         tf: filterSettings.tf,
         pj: filterSettings.pj,
-        smokingOption: filterSettings.smokingOption,
+        allowSmoking: filterSettings.allowSmoking,
         lat: 35.6860,
         lng: 139.7671
       };
@@ -265,9 +265,8 @@ const CreateMatchingModal = ({ isOpen, onClose, onSuccess }) => {
               <div className="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-100/70">
                 <span className="text-xs font-bold text-slate-600">흡연 요구 조건</span>
                 <div className="flex gap-1 bg-white p-1 rounded-xl border border-slate-100 shadow-sm">
-                  <button type="button" onClick={() => setFilterSettings(prev => ({ ...prev, smokingOption: "NON_SMOKER" }))} className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${filterSettings.smokingOption === "NON_SMOKER" ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-slate-500'}`}>비흡연만</button>
-                  <button type="button" onClick={() => setFilterSettings(prev => ({ ...prev, smokingOption: "SMOKER" }))} className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${filterSettings.smokingOption === "SMOKER" ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-slate-500'}`}>흡연자만</button>
-                  <button type="button" onClick={() => setFilterSettings(prev => ({ ...prev, smokingOption: "BOTH" }))} className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${filterSettings.smokingOption === "BOTH" ? 'bg-amber-400 text-slate-900 font-bold' : 'text-slate-400 hover:text-slate-500'}`}>상관없음</button>
+                  <button type="button" onClick={() => setFilterSettings(prev => ({ ...prev, allowSmoking: false }))} className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${filterSettings.smokingOption === "NON_SMOKER" ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-slate-500'}`}>비흡연만</button>
+                  <button type="button" onClick={() => setFilterSettings(prev => ({ ...prev, allowSmoking: true }))} className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${filterSettings.smokingOption === "SMOKER" ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-slate-500'}`}>흡연자만</button>
                 </div>
               </div>
             </div>
