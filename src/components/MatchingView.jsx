@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
@@ -11,11 +6,9 @@ import {
   Plus,
   Loader2,
   Square,
-  ChevronDown,
   Compass,
   Check,
   MapPin,
-  AlertCircle,
   Calendar,
   MessageSquare,
   FileText,
@@ -23,7 +16,6 @@ import {
   HelpCircle,
   ChevronLeft,
   ChevronRight,
-  ShieldAlert
 } from 'lucide-react';
 import { Form, Input, DatePicker, Button, message } from 'antd';
 import { EventSourcePolyfill } from "event-source-polyfill";
@@ -429,16 +421,18 @@ export const MatchingView = () => {
               heartbeatTimeout: 120000
             }
         );
-        eventSourceRef.current.onerror = () => {
+        eventSourceRef.current.onerror = (e) => {
           if (eventSourceRef.current) {
             eventSourceRef.current.close();
             eventSourceRef.current = null;
           }
+          console.log("이벤트 스트림 에러: " , e);
           setCurrentStreamMode('none');
         };
 
         eventSourceRef.current.addEventListener('matching', (e) => addMatchingList(JSON.parse(e.data)));
         eventSourceRef.current.addEventListener('matching-close', () => disconnectSSE());
+        
       } catch (e) {
         console.log(e);
       }
@@ -590,10 +584,8 @@ export const MatchingView = () => {
               )}
             </div>
 
-            {/* 리스트가 아닌 단어장(Flashcard) 스르륵 서치 슬라이더 파트 */}
             <div className="flex-1 flex flex-col justify-center items-center min-h-0 relative px-2">
 
-              {/* 💡 [요구사항 반영]: 레이더 탐색 중일 때 명시적 서치 안내 로더 */}
               {isMatchingLoading || (currentStreamMode !== 'none' && filteredMeetups.length === 0) ? (
                   <div className="w-full max-w-[360px] aspect-[4/5] border border-blue-100 bg-[#F4F9FF] rounded-[24px] flex flex-col items-center justify-center p-8 text-center space-y-4 shadow-inner">
                     <div className="relative flex items-center justify-center">
