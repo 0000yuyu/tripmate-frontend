@@ -26,7 +26,6 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { Form, Input, DatePicker, Button, message } from 'antd';
-import { matchingService } from '../services';
 import { EventSourcePolyfill } from "event-source-polyfill";
 import { getAccessToken } from "@utils/auth.js";
 import axiosInstance from "@utils/axiosInstance.js";
@@ -337,6 +336,11 @@ export const MatchingView = () => {
           keepalive: true
         });
       }
+      if (streamModeRef.current === 'host') {
+        await axiosInstance.delete('/matching/host/sub', {
+          keepalive: true
+        });
+      }
     }
     setMeetUps([]);
     setCurrentStreamMode('none');
@@ -425,6 +429,13 @@ export const MatchingView = () => {
               heartbeatTimeout: 120000
             }
         );
+        eventSourceRef.current.onerror = () => {
+          if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+            eventSourceRef.current = null;
+          }
+          setCurrentStreamMode('none');
+        };
 
         eventSourceRef.current.addEventListener('matching', (e) => addMatchingList(JSON.parse(e.data)));
         eventSourceRef.current.addEventListener('matching-close', () => disconnectSSE());
