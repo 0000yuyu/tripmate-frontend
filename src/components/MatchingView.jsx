@@ -311,18 +311,32 @@ export const MatchingView = () => {
   const [roomStatus, setRoomStatus] = useState('전체');
 
   const eventSourceRef = useRef(null);
+  const streamModeRef = useRef(currentStreamMode);
 
   useEffect(() => {
     fetchUserSetting();
-    return () => disconnectSSE();
+    window.addEventListener('beforeunload', disconnectSSE);
+    return () => {
+      window.removeEventListener('beforeunload', disconnectSSE);
+    };
   }, []);
 
-  const disconnectSSE = () => {
+
+
+  useEffect(() => {
+    streamModeRef.current = currentStreamMode;
+  }, [currentStreamMode]);
+
+  const disconnectSSE = async () => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
-      // 요구사항: 상태 알림창을 ~되었습니다 양식으로 완결
       message.success("매칭 탐색이 중단되었습니다.");
+      if (streamModeRef.current === 'guest') {
+        await axiosInstance.delete('/matching/mate/sub', {
+          keepalive: true
+        });
+      }
     }
     setMeetUps([]);
     setCurrentStreamMode('none');
@@ -379,29 +393,9 @@ export const MatchingView = () => {
     });
   };
 
-  const handleToggleActivation = async () => {
-    if (isLoading) return;
-    setIsLoading(true);
-    try {
-      if (isActive) {
-        await matchingService.deactivateMatching();
-        message.success("매칭 활성화 가동이 오프라인으로 전환되었습니다.");
-      } else {
-        await matchingService.activateMatching();
-        message.success("매칭 활성화 가동이 온라인으로 전환되었습니다.");
-      }
-      setIsActive(prev => !prev);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const startMatchingStream = (type) => {
     setIsMatchingLoading(true);
 
-    // 이전에 돌고있던 SSE 자원 컷
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
@@ -413,7 +407,6 @@ export const MatchingView = () => {
       setIsMatchingLoading(false);
       setCurrentStreamMode(type);
 
-      // 요구사항 피드백 반영: 알림 문구 분리 완결화
       if (type === 'guest') {
         message.success("메이트 매칭이 시작되었습니다.");
       } else if (type === 'host') {
