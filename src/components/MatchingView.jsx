@@ -1,9 +1,13 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import {
   Play,
-  Settings,
   Plus,
   Loader2,
   Square,
@@ -16,7 +20,10 @@ import {
   MessageSquare,
   FileText,
   User,
-  HelpCircle
+  HelpCircle,
+  ChevronLeft,
+  ChevronRight,
+  ShieldAlert
 } from 'lucide-react';
 import { Form, Input, DatePicker, Button, message } from 'antd';
 import { matchingService } from '../services';
@@ -24,20 +31,6 @@ import { EventSourcePolyfill } from "event-source-polyfill";
 import { getAccessToken } from "@utils/auth.js";
 import axiosInstance from "@utils/axiosInstance.js";
 import CustomModal from "@components/CustomModal.jsx";
-
-const SkeletonCard = () => (
-    <div className="bg-slate-50/60 border border-slate-100 rounded-2xl p-5 flex flex-row items-center justify-between gap-4 animate-pulse">
-      <div className="flex flex-col gap-2 flex-1">
-        <div className="flex gap-2">
-          <div className="w-12 h-4 bg-slate-200 rounded-md" />
-          <div className="w-16 h-4 bg-slate-200 rounded-md" />
-        </div>
-        <div className="w-3/4 h-5 bg-slate-200 rounded-md mt-1" />
-        <div className="w-1/2 h-4 bg-slate-200 rounded-md" />
-      </div>
-      <div className="w-20 h-9 bg-slate-200 rounded-xl" />
-    </div>
-);
 
 const FilterSettings = ({ settings, setSettings }) => {
   const mbtiPairs = [['I', 'E'], ['S', 'N'], ['T', 'F'], ['P', 'J']];
@@ -53,9 +46,8 @@ const FilterSettings = ({ settings, setSettings }) => {
   return (
       <div className="space-y-4">
         <p className="font-bold text-slate-800 text-sm tracking-tight flex items-center gap-1.5 mt-1">
-          <Compass size={16} className="text-[#007AFF]" /> 선호 성향 필터
+          <Compass size={16} className="text-[#007AFF]" /> 내 성향 및 프로필 설정
         </p>
-
         <div className="grid grid-cols-4 gap-2 mb-4">
           {mbtiPairs.map((pair, idx) => (
               <div key={idx} className="flex flex-col border border-slate-100 rounded-xl overflow-hidden shadow-sm bg-white">
@@ -76,27 +68,26 @@ const FilterSettings = ({ settings, setSettings }) => {
               </div>
           ))}
         </div>
-
         <div className="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-100/70">
-          <span className="text-xs font-bold text-slate-600">흡연 여부 필터</span>
+          <span className="text-xs font-bold text-slate-600">본인 흡연 여부</span>
           <div className="flex gap-1 bg-white p-1 rounded-xl border border-slate-100 shadow-sm">
             <button
                 type="button"
                 onClick={() => setSettings(prev => ({ ...prev, allowSmoking: false }))}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all ${
                     !settings.allowSmoking ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:text-slate-500'
                 }`}
             >
-              비흡연만
+              비흡연자
             </button>
             <button
                 type="button"
                 onClick={() => setSettings(prev => ({ ...prev, allowSmoking: true }))}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black transition-all ${
                     settings.allowSmoking ? 'bg-amber-400 text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-500'
                 }`}
             >
-              상관없음
+              흡연자
             </button>
           </div>
         </div>
@@ -127,16 +118,13 @@ const AcceptSuccessModal = ({ isOpen, onClose, meetupInfo }) => {
           <div className="w-14 h-14 bg-[#F0F7FF] rounded-full flex items-center justify-center text-[#007AFF] mb-4 shadow-sm">
             <Check size={26} strokeWidth={3} />
           </div>
-
           <h3 className="text-lg font-black text-[#222222] mb-1">참여가 완료되었습니다!</h3>
           <p className="text-xs font-semibold text-gray-400 mb-6">선택하신 메이트와 함께 즐거운 여정을 시작해보세요.</p>
-
           <div className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-left space-y-3.5 mb-2">
             <div>
               <span className="text-[10px] font-black text-gray-400 block mb-1">방 제목</span>
               <h4 className="text-sm font-bold text-[#222222] truncate">{meetupInfo.title}</h4>
             </div>
-
             <div className="grid grid-cols-2 gap-3 border-t border-gray-100 pt-3">
               <div>
                 <span className="text-[10px] font-black text-gray-400 block mb-0.5">지역</span>
@@ -153,7 +141,6 @@ const AcceptSuccessModal = ({ isOpen, onClose, meetupInfo }) => {
                 </div>
               </div>
             </div>
-
             <div className="border-t border-gray-100 pt-3">
               <span className="text-[10px] font-black text-gray-400 block mb-1">상세 설명</span>
               <div className="flex gap-1.5 items-start bg-white border border-gray-100 rounded-xl p-2.5 min-h-[50px]">
@@ -163,7 +150,6 @@ const AcceptSuccessModal = ({ isOpen, onClose, meetupInfo }) => {
                 </p>
               </div>
             </div>
-
             <div className="border-t border-gray-100 pt-3">
               <span className="text-[10px] font-black text-gray-400 block mb-1">연락용 오픈채팅 링크</span>
               <a
@@ -182,21 +168,10 @@ const AcceptSuccessModal = ({ isOpen, onClose, meetupInfo }) => {
   );
 };
 
-// ==========================================
-// 4. [업그레이드] 매칭방 생성 모달 컴포넌트 (MBTI 해제 토글 탑재)
-// ==========================================
 const CreateMatchingModal = ({ isOpen, onClose, onSuccess }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-
-  // 💡 초기값 무조건 선택 해제 상태(`null`)로 대입할 수 있게 정리
-  const [filterSettings, setFilterSettings] = useState({
-    ie: null,
-    sn: null,
-    tf: null,
-    pj: null,
-    smokingOption: "BOTH"
-  });
+  const [filterSettings, setFilterSettings] = useState({ ie: null, sn: null, tf: null, pj: null, smokingOption: "BOTH" });
 
   useEffect(() => {
     if (!isOpen) {
@@ -206,39 +181,32 @@ const CreateMatchingModal = ({ isOpen, onClose, onSuccess }) => {
   }, [isOpen, form]);
 
   const handleMbtiClick = (key, value) => {
-    setFilterSettings(prev => ({
-      ...prev,
-      [key]: prev[key] === value ? null : value
-    }));
+    setFilterSettings(prev => ({ ...prev, [key]: prev[key] === value ? null : value }));
   };
 
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      // 💡 현재 시점 시간 포맷팅 안정적 취득 (ISO)
       const nowIsoString = new Date().toISOString().split('.')[0];
-
       const payload = {
         title: values.title,
         description: values.description,
         chatUrl: values.chatUrl || null,
         scheduledAt: values.scheduledAt ? values.scheduledAt.format('YYYY-MM-DDTHH:mm:ss') : null,
         recruitedAt: nowIsoString,
-        ie: filterSettings.ie ,
+        ie: filterSettings.ie,
         sn: filterSettings.sn,
-        tf: filterSettings.tf ,
+        tf: filterSettings.tf,
         pj: filterSettings.pj,
         smokingOption: filterSettings.smokingOption,
         lat: 35.6860,
         lng: 139.7671
       };
-
       await axiosInstance.post("/matching", payload);
       message.success('매칭방이 성공적으로 생성되었습니다!');
       if (onSuccess) onSuccess();
       onClose();
     } catch (error) {
-      console.error(error);
       message.error(error.response?.data?.message || '매칭방 생성 중 에러가 발생했습니다.');
     } finally {
       setLoading(false);
@@ -267,119 +235,51 @@ const CreateMatchingModal = ({ isOpen, onClose, onSuccess }) => {
       >
         <div className="flex flex-col items-center w-full px-1 max-h-[75vh] overflow-y-auto pr-2 scrollbar-hide">
           <h3 className="text-base font-bold text-[#222222] mb-5 shrink-0">매칭방 생성</h3>
-
-          <Form
-              form={form}
-              layout="vertical"
-              onFinish={handleSubmit}
-              requiredMark={false}
-              className="w-full space-y-3.5 overflow-visible"
-          >
+          <Form form={form} layout="vertical" onFinish={handleSubmit} requiredMark={false} className="w-full space-y-3.5 overflow-visible">
             <div className="space-y-1 text-left">
               <label className="text-[11px] font-bold text-gray-400 px-1">방 제목 <span className="text-red-500">*</span></label>
               <Form.Item name="title" className="!mb-0" rules={[{ required: true, message: '방 제목을 입력해주세요.' }]}>
-                <Input
-                    placeholder="매칭방 제목을 입력하세요"
-                    className="py-3 px-4 border border-gray-200/80 rounded-[12px] text-xs font-bold text-gray-800 placeholder:text-gray-300 focus:border-[#007AFF] focus:shadow-none transition-colors"
-                />
+                <Input placeholder="매칭방 제목을 입력하세요" className="py-3 px-4 border border-gray-200/80 rounded-[12px] text-xs font-bold text-gray-800 placeholder:text-gray-300 focus:border-[#007AFF]" />
               </Form.Item>
             </div>
-
             <div className="space-y-1 text-left">
               <label className="text-[11px] font-bold text-gray-400 px-1">상세 설명 <span className="text-red-500">*</span></label>
               <Form.Item name="description" className="!mb-0" rules={[{ required: true, message: '상세 설명을 입력해주세요.' }]}>
-                <Input.TextArea
-                    placeholder="함께할 활동 내용을 적어주세요."
-                    rows={2}
-                    className="p-3 border border-gray-200/80 rounded-[12px] text-xs font-bold text-gray-800 placeholder:text-gray-300 focus:border-[#007AFF] focus:shadow-none transition-colors resize-none"
-                />
+                <Input.TextArea placeholder="함께할 활동 내용을 적어주세요." rows={2} className="p-3 border border-gray-200/80 rounded-[12px] text-xs font-bold text-gray-800 placeholder:text-gray-300 focus:border-[#007AFF] resize-none" />
               </Form.Item>
             </div>
-
-            {/* 3. 오픈채팅 주소 (선택 - Nullable) */}
             <div className="space-y-1 text-left">
               <label className="text-[11px] font-bold text-gray-400 px-1">오픈채팅 주소 <span className="text-gray-300 font-medium">(선택)</span></label>
               <Form.Item name="chatUrl" className="!mb-0">
-                <Input
-                    placeholder="카카오톡 오픈채팅 주소 (미입력 가능)"
-                    className="py-3 px-4 border border-gray-200/80 rounded-[12px] text-xs font-bold text-gray-800 placeholder:text-gray-300 focus:border-[#007AFF] focus:shadow-none transition-colors"
-                />
+                <Input placeholder="카카오톡 오픈채팅 주소 (미입력 가능)" className="py-3 px-4 border border-gray-200/80 rounded-[12px] text-xs font-bold text-gray-800 placeholder:text-gray-300 focus:border-[#007AFF]" />
               </Form.Item>
             </div>
-
             <div className="space-y-1 text-left">
               <label className="text-[11px] font-bold text-gray-400 px-1">모집 마감 시간</label>
               <Form.Item name="scheduledAt" className="!mb-0" rules={[{ required: true, message: '모집 마감 시간을 지정해주세요' }]}>
-                <DatePicker
-                    showTime
-                    placeholder="날짜 및 시간"
-                    className="w-full h-[44px] border border-gray-200/80 rounded-[12px] text-xs font-bold text-gray-800 focus:border-[#007AFF] transition-colors"
-                />
+                <DatePicker showTime placeholder="날짜 및 시간" className="w-full h-[44px] border border-gray-200/80 rounded-[12px] text-xs font-bold text-gray-800 focus:border-[#007AFF]" />
               </Form.Item>
             </div>
-
             <div className="border-t border-gray-100 pt-4 mt-3 space-y-4 text-left">
-              <p className="font-bold text-slate-800 text-sm tracking-tight flex items-center gap-1.5">
-                <Compass size={16} className="text-[#007AFF]" /> 생성 방 매칭 옵션 설정
-              </p>
-
-              {/* MBTI Grid 선택 바 */}
+              <p className="font-bold text-slate-800 text-sm tracking-tight flex items-center gap-1.5"><Compass size={16} className="text-[#007AFF]" /> 생성 방 매칭 옵션 설정</p>
               <div className="grid grid-cols-4 gap-1.5">
                 {mbtiPairs.map((pair, idx) => (
                     <div key={idx} className="flex flex-col border border-slate-100 rounded-xl overflow-hidden shadow-sm bg-white">
                       {pair.map(val => (
-                          <button
-                              key={val}
-                              type="button"
-                              onClick={() => handleMbtiClick(settingKeys[idx], val)}
-                              className={`py-2 text-xs font-bold transition-all ${
-                                  filterSettings[settingKeys[idx]] === val
-                                      ? 'bg-[#007AFF] text-white'
-                                      : 'bg-white text-slate-300 hover:text-slate-400'
-                              }`}
-                          >
-                            {val}
-                          </button>
+                          <button key={val} type="button" onClick={() => handleMbtiClick(settingKeys[idx], val)} className={`py-2 text-xs font-bold transition-all ${filterSettings[settingKeys[idx]] === val ? 'bg-[#007AFF] text-white' : 'bg-white text-slate-300 hover:text-slate-400'}`}>{val}</button>
                       ))}
                     </div>
                 ))}
               </div>
-
-              {/* 흡연 옵션 필터 */}
               <div className="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-100/70">
                 <span className="text-xs font-bold text-slate-600">흡연 요구 조건</span>
                 <div className="flex gap-1 bg-white p-1 rounded-xl border border-slate-100 shadow-sm">
-                  <button
-                      type="button"
-                      onClick={() => setFilterSettings(prev => ({ ...prev, smokingOption: "NON_SMOKER" }))}
-                      className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${
-                          filterSettings.smokingOption === "NON_SMOKER" ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-slate-500'
-                      }`}
-                  >
-                    비흡연만
-                  </button>
-                  <button
-                      type="button"
-                      onClick={() => setFilterSettings(prev => ({ ...prev, smokingOption: "SMOKER" }))}
-                      className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${
-                          filterSettings.smokingOption === "SMOKER" ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-slate-500'
-                      }`}
-                  >
-                    흡연자만
-                  </button>
-                  <button
-                      type="button"
-                      onClick={() => setFilterSettings(prev => ({ ...prev, smokingOption: "BOTH" }))}
-                      className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${
-                          filterSettings.smokingOption === "BOTH" ? 'bg-amber-400 text-slate-900 font-bold' : 'text-slate-400 hover:text-slate-500'
-                      }`}
-                  >
-                    상관없음
-                  </button>
+                  <button type="button" onClick={() => setFilterSettings(prev => ({ ...prev, smokingOption: "NON_SMOKER" }))} className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${filterSettings.smokingOption === "NON_SMOKER" ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-slate-500'}`}>비흡연만</button>
+                  <button type="button" onClick={() => setFilterSettings(prev => ({ ...prev, smokingOption: "SMOKER" }))} className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${filterSettings.smokingOption === "SMOKER" ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-slate-500'}`}>흡연자만</button>
+                  <button type="button" onClick={() => setFilterSettings(prev => ({ ...prev, smokingOption: "BOTH" }))} className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black transition-all ${filterSettings.smokingOption === "BOTH" ? 'bg-amber-400 text-slate-900 font-bold' : 'text-slate-400 hover:text-slate-500'}`}>상관없음</button>
                 </div>
               </div>
             </div>
-
           </Form>
         </div>
       </CustomModal>
@@ -387,7 +287,7 @@ const CreateMatchingModal = ({ isOpen, onClose, onSuccess }) => {
 };
 
 // ==========================================
-// 5. 메인 매칭 맵 뷰 컴포넌트
+// 4. 메인 매칭 맵 뷰 컴포넌트 (스르륵 단어장 애니메이션 탑재)
 // ==========================================
 export const MatchingView = () => {
   const navigate = useNavigate();
@@ -398,15 +298,16 @@ export const MatchingView = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
 
-  const [isStreamStarted, setIsStreamStarted] = useState(false);
+  // 현재 스트림의 성격 상태 분리 ('none' | 'guest' | 'host')
+  const [currentStreamMode, setCurrentStreamMode] = useState('none');
 
-  // 수락 완료 팝업용 상태
+  // 단어장 넘기기용 인덱스 상태 값 정의
+  const [currentCardIdx, setCurrentCardIdx] = useState(0);
+
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [selectedMeetup, setSelectedMeetup] = useState(null);
 
-  // 매칭 가이드용 성향 래퍼 (선택 안한 상태 지원을 위해 null 초기화)
   const [userSettings, setUserSettings] = useState({ ie: null, sn: null, tf: null, pj: null, allowSmoking: false });
-
   const [roomStatus, setRoomStatus] = useState('전체');
 
   const eventSourceRef = useRef(null);
@@ -420,9 +321,12 @@ export const MatchingView = () => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
+      // 요구사항: 상태 알림창을 ~되었습니다 양식으로 완결
+      message.success("매칭 탐색이 중단되었습니다.");
     }
     setMeetUps([]);
-    setIsStreamStarted(false);
+    setCurrentStreamMode('none');
+    setCurrentCardIdx(0);
   };
 
   const fetchUserSetting = async () => {
@@ -452,8 +356,9 @@ export const MatchingView = () => {
       setSelectedMeetup(meetupItem);
       setIsSuccessModalOpen(true);
       setMeetUps(prev => prev.filter(item => item.matchingId !== meetupItem.matchingId));
+      if (currentCardIdx > 0) setCurrentCardIdx(prev => prev - 1);
+      message.success("매칭 요청 수락이 완료되었습니다.");
     } catch (e) {
-      console.log(e);
       message.error("매칭 수락 처리 중 오류가 발생했습니다.");
     }
   };
@@ -467,7 +372,7 @@ export const MatchingView = () => {
         city: meetUp.city || (prevState.length % 2 === 0 ? '도쿄' : '서울'),
         status: meetUp.status || '모집 중',
         chatUrl: meetUp.chatUrl || 'https://open.kakao.com/...',
-        description: meetUp.description || '',
+        description: meetUp.description || '트립메이트 실시간 오픈 번개 코스입니다.',
         scheduledAt: meetUp.scheduledAt || new Date().toISOString()
       };
       return [...filteredList, enrichedMeetup];
@@ -480,8 +385,10 @@ export const MatchingView = () => {
     try {
       if (isActive) {
         await matchingService.deactivateMatching();
+        message.success("매칭 활성화 가동이 오프라인으로 전환되었습니다.");
       } else {
         await matchingService.activateMatching();
+        message.success("매칭 활성화 가동이 온라인으로 전환되었습니다.");
       }
       setIsActive(prev => !prev);
     } catch (error) {
@@ -493,11 +400,26 @@ export const MatchingView = () => {
 
   const startMatchingStream = (type) => {
     setIsMatchingLoading(true);
-    disconnectSSE();
+
+    // 이전에 돌고있던 SSE 자원 컷
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    setMeetUps([]);
+    setCurrentCardIdx(0);
 
     setTimeout(() => {
       setIsMatchingLoading(false);
-      setIsStreamStarted(true);
+      setCurrentStreamMode(type);
+
+      // 요구사항 피드백 반영: 알림 문구 분리 완결화
+      if (type === 'guest') {
+        message.success("메이트 매칭이 시작되었습니다.");
+      } else if (type === 'host') {
+        message.success("호스트 매칭이 시작되었습니다.");
+      }
+
       try {
         const lat = 35.6860, lng = 139.7671;
         const endpoint = type === 'guest' ? '/api/matching/mate/sub' : '/api/matching/host/sub';
@@ -511,27 +433,68 @@ export const MatchingView = () => {
             }
         );
 
-        eventSourceRef.current.addEventListener('connect', () => console.log(`${type} 연결 성공`));
         eventSourceRef.current.addEventListener('matching', (e) => addMatchingList(JSON.parse(e.data)));
         eventSourceRef.current.addEventListener('matching-close', () => disconnectSSE());
-        eventSourceRef.current.onerror = (e) => console.error("SSE 에러:", e);
       } catch (e) {
         console.log(e);
       }
     }, 600);
   };
 
+  // 💡 [요구사항 반영]: 메이트 매칭 도중 방 생성 누를 시 모달 가로채기 차단 브릿지 인터셉터
+  const handleTryCreateRoom = () => {
+    if (currentStreamMode === 'guest') {
+      message.info("진행 중인 메이트 매칭을 끊으시겠습니까? 방을 만들면 호스트 모드로 전환됩니다.");
+      disconnectSSE();
+      setTimeout(() => {
+        setIsModalOpen(true);
+      }, 400);
+    } else {
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleCreateSuccess = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    setMeetUps([]);
+    setCurrentCardIdx(0);
+    startMatchingStream('host');
+  };
+
   const filteredMeetups = useMemo(() => {
     return meetups.filter(meetup => roomStatus === '전체' || meetup.status === roomStatus);
   }, [meetups, roomStatus]);
 
+  // 단어장 슬라이드 이동 유틸
+  const handlePrevCard = () => {
+    if (currentCardIdx > 0) setCurrentCardIdx(prev => prev - 1);
+  };
+
+  const handleNextCard = () => {
+    if (currentCardIdx < filteredMeetups.length - 1) setCurrentCardIdx(prev => prev + 1);
+  };
+
   return (
       <div className="h-full px-2 bg-white rounded-2xl md:rounded-[32px] shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden min-h-[600px] lg:h-[750px] flex flex-col border border-gray-100">
 
+        {/* 상단 액션 내비바 */}
         <div className="p-6 md:px-10 md:py-6 border-b border-gray-100 flex flex-row items-center justify-between bg-white shrink-0">
-          <h2 className="text-xl md:text-2xl font-bold text-[#222222] tracking-tight">지금 만나요 매칭!</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl md:text-2xl font-bold text-[#222222] tracking-tight">지금 만나요 매칭!</h2>
+            {/* HOST / GUEST 뷰 다이렉트 명시 태그 */}
+            {currentStreamMode !== 'none' && (
+                <span className={`px-3 py-1 rounded-full text-[10px] font-black ${
+                    currentStreamMode === 'host' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
+                }`}>
+                {currentStreamMode === 'host' ? '👑 호스트 수신 모드 가동중' : '🔍 메이트 탐색 모드 가동중'}
+              </span>
+            )}
+          </div>
           <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={handleTryCreateRoom}
               className="flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-200/60 px-5 py-2.5 rounded-2xl font-bold hover:bg-gray-100 transition-all text-gray-700 text-xs md:text-sm shadow-sm"
           >
             <Plus size={16} className="text-[#007AFF]" strokeWidth={3} />
@@ -539,7 +502,7 @@ export const MatchingView = () => {
           </button>
         </div>
 
-        <CreateMatchingModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={() => startMatchingStream('host')} />
+        <CreateMatchingModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={handleCreateSuccess} />
 
         <AcceptSuccessModal
             isOpen={isSuccessModalOpen}
@@ -548,9 +511,10 @@ export const MatchingView = () => {
         />
 
         <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+          {/* 왼쪽 제어 콘솔 패널 구역 */}
           <div className="w-full lg:w-[48%] border-r border-[#F3F4F6] flex flex-col bg-white p-6 md:p-8 min-h-0">
 
-            {/* 필터 제어 대시보드 */}
+            {/* 필터 툴바 단락 */}
             <div className="flex flex-wrap items-center gap-2 mb-6 shrink-0 relative z-40">
               <button
                   onClick={() => startMatchingStream('guest')}
@@ -559,33 +523,12 @@ export const MatchingView = () => {
                 <Play size={13} fill="currentColor" />
                 매칭 시작
               </button>
-
-              <div className="bg-white border border-gray-200 px-4 py-2.5 rounded-full flex items-center gap-2.5 h-[38px] shrink-0 shadow-sm">
-                <span className="text-[11px] font-bold text-gray-500 tracking-wide">LIVE</span>
-                <button
-                    type="button"
-                    disabled={isLoading}
-                    onClick={handleToggleActivation}
-                    className={`w-9 h-[18px] rounded-full relative p-0.5 transition-all duration-300 outline-none flex items-center cursor-pointer ${
-                        isLoading ? 'opacity-60 pointer-events-none' : ''
-                    } ${isActive ? 'bg-[#007AFF]' : 'bg-gray-200'}`}
-                >
-                  {isLoading ? (
-                      <Loader2 size={10} className="animate-spin text-white mx-auto" />
-                  ) : (
-                      <span className={`w-3.5 h-3.5 bg-white rounded-full block shadow-sm transition-all duration-300 transform ${isActive ? 'translate-x-[18px]' : 'translate-x-0'}`} />
-                  )}
-                </button>
-              </div>
-
-              {/* 매칭 옵션 */}
               <div className="relative">
                 <button
                     onClick={() => setActiveDropdown(prev => prev === 'options' ? null : 'options')}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 border ${activeDropdown === 'options' ? 'border-[#007AFF] text-[#007AFF]' : 'border-gray-200 text-gray-700'} bg-white rounded-full text-xs font-bold whitespace-nowrap hover:bg-gray-50 shadow-sm transition-all`}
+                    className={`flex items-center gap-1.5 px-4 py-2.5 border ${activeDropdown === 'options' ? 'border-[#007AFF] text-[#007AFF]' : 'border-gray-200 text-gray-700'} bg-white rounded-full text-xs font-bold whitespace-nowrap hover:bg-gray-50 shadow-sm`}
                 >
-                  <span>매칭 옵션</span>
-                  <ChevronDown size={14} className={`transition-transform duration-200 ${activeDropdown === 'options' ? 'rotate-180' : ''}`} />
+                  <span>내 성향 설정</span>
                 </button>
 
                 {activeDropdown === 'options' && (
@@ -594,30 +537,25 @@ export const MatchingView = () => {
                       <div className="absolute top-full left-0 mt-2 w-[280px] bg-white border border-gray-100/70 rounded-[24px] shadow-[0_15px_45px_rgba(0,0,0,0.09)] p-5 z-50 animate-in fade-in slide-in-from-top-1.5 duration-200">
                         <div className="flex items-center gap-2 mb-3 pb-2.5 border-b border-gray-50 text-slate-500">
                           <User size={14} className="text-gray-400" />
-                          <span className="text-[11px] font-bold text-slate-700 tracking-tight">내 가중치 매칭 성향 필터</span>
+                          <span className="text-[11px] font-bold text-slate-700 tracking-tight">내 프로필 설정</span>
                         </div>
-
                         <FilterSettings settings={userSettings} setSettings={setUserSettings} />
-
                         <div className="flex gap-2 mt-5">
-                          <button onClick={() => setActiveDropdown(null)} className="flex-1 bg-slate-50 text-slate-400 py-2.5 text-xs font-bold rounded-xl active:scale-98 transition-all">취소</button>
-                          <button onClick={handleSaveSettings} className="flex-[1.8] bg-[#007AFF] text-white py-2.5 text-xs font-black rounded-xl shadow-md shadow-blue-100 active:scale-98 transition-all hover:brightness-105">저장</button>
+                          <button onClick={() => setActiveDropdown(null)} className="flex-1 bg-slate-50 text-slate-400 py-2.5 text-xs font-bold rounded-xl">취소</button>
+                          <button onClick={handleSaveSettings} className="flex-[1.8] bg-[#007AFF] text-white py-2.5 text-xs font-black rounded-xl shadow-md">저장</button>
                         </div>
                       </div>
                     </>
                 )}
               </div>
 
-              {/* 방 상태 필터 */}
               <div className="relative">
                 <button
                     onClick={() => setActiveDropdown(prev => prev === 'status' ? null : 'status')}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 border ${roomStatus !== '전체' ? 'border-[#007AFF] bg-[#F0F7FF] text-[#007AFF]' : 'border-gray-200 text-gray-700'} bg-white rounded-full text-xs font-bold whitespace-nowrap hover:bg-gray-50 shadow-sm`}
+                    className={`flex items-center gap-1.5 px-4 py-2.5 border ${roomStatus !== '전체' ? 'border-[#007AFF] bg-[#F0F7FF] text-[#007AFF]' : 'border-gray-200 text-gray-700'} bg-white rounded-full text-xs font-bold whitespace-nowrap`}
                 >
                   <span>방 상태: {roomStatus}</span>
-                  <ChevronDown size={14} />
                 </button>
-
                 {activeDropdown === 'status' && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setActiveDropdown(null)} />
@@ -637,93 +575,129 @@ export const MatchingView = () => {
                 )}
               </div>
 
-              {/* 중단 */}
-              {eventSourceRef.current && (
+              {currentStreamMode !== 'none' && (
                   <button
                       onClick={disconnectSSE}
-                      className="flex items-center gap-1 px-3 py-2 bg-red-50 rounded-full text-[11px] font-bold text-red-500 whitespace-nowrap hover:bg-red-100 transition-all border border-red-100 active:scale-95"
+                      className="flex items-center gap-1 px-3 py-2 bg-red-50 rounded-full text-[11px] font-bold text-red-500 whitespace-nowrap hover:bg-red-100 border border-red-100 active:scale-95 transition-all"
                   >
                     <Square size={10} fill="currentColor" />
-                    중단
+                    매칭 중단
                   </button>
               )}
             </div>
 
-            {/* 수직 리스트 렌더링 구역 */}
-            <div className="flex-1 overflow-y-auto pr-1 space-y-4 pb-4 scrollbar-hide min-h-0">
+            {/* 리스트가 아닌 단어장(Flashcard) 스르륵 서치 슬라이더 파트 */}
+            <div className="flex-1 flex flex-col justify-center items-center min-h-0 relative px-2">
 
-              {isActive && !isMatchingLoading && (
-                  <div className="bg-[#F0F7FF] border border-blue-100 rounded-2xl px-5 py-3.5 flex items-center justify-between animate-pulse">
-                    <div className="flex items-center gap-2">
-                      <Loader2 size={14} className="animate-spin text-[#007AFF]" />
-                      <span className="text-xs font-black text-[#007AFF]">LIVE 레이더 가동 중...</span>
+              {/* 💡 [요구사항 반영]: 레이더 탐색 중일 때 명시적 서치 안내 로더 */}
+              {isMatchingLoading || (currentStreamMode !== 'none' && filteredMeetups.length === 0) ? (
+                  <div className="w-full max-w-[360px] aspect-[4/5] border border-blue-100 bg-[#F4F9FF] rounded-[24px] flex flex-col items-center justify-center p-8 text-center space-y-4 shadow-inner">
+                    <div className="relative flex items-center justify-center">
+                      <div className="absolute w-16 h-16 bg-[#007AFF]/10 rounded-full animate-ping" />
+                      <Loader2 size={36} className="animate-spin text-[#007AFF] relative z-10" />
                     </div>
-                    <span className="text-[10px] font-bold text-blue-400">실시간 매칭방 수신 대기</span>
-                  </div>
-              )}
-
-              {isMatchingLoading ? (
-                  <div className="space-y-4">
-                    <SkeletonCard />
-                    <SkeletonCard />
-                    <SkeletonCard />
+                    <div className="space-y-1">
+                      <p className="text-sm font-black text-[#007AFF]">실시간 레이더 가동 중</p>
+                      <p className="text-xs font-bold text-slate-400">조건에 일치하는 최적의 매칭방을 찾고 있습니다...</p>
+                    </div>
                   </div>
               ) : filteredMeetups.length === 0 ? (
-                  !isStreamStarted ? (
-                      <div className="h-full min-h-[280px] flex flex-col items-center justify-center border-2 border-dashed border-gray-100 rounded-2xl text-gray-400 bg-slate-50/30">
-                        <HelpCircle className="mb-2 text-[#007AFF] opacity-60 animate-pulse" size={26} />
-                        <p className="text-xs font-bold text-gray-700 mb-0.5">아직 매칭 탐색이 실행되지 않았습니다.</p>
-                        <p className="text-[11px] font-medium text-gray-400">좌측 상단의 '매칭 시작' 버튼을 클릭해주세요.</p>
-                      </div>
-                  ) : (
-                      <div className="h-full min-h-[280px] flex flex-col items-center justify-center border-2 border-dashed border-gray-100 rounded-2xl text-gray-400">
-                        <AlertCircle className="mb-2 opacity-40 animate-bounce" size={24} />
-                        <p className="text-xs font-bold text-gray-400">조건에 일치하는 매칭방이 존재하지 않습니다.</p>
-                      </div>
-                  )
+                  <div className="w-full max-w-[360px] aspect-[4/5] flex flex-col items-center justify-center border-2 border-dashed border-gray-100 rounded-[24px] text-gray-400 bg-slate-50/50">
+                    <HelpCircle className="mb-2 text-[#007AFF] opacity-50" size={32} />
+                    <p className="text-xs font-bold text-gray-700">아직 탐색이 실행되지 않았습니다.</p>
+                    <p className="text-[11px] font-medium text-gray-400 mt-0.5">상단 '매칭 시작' 단추를 눌러 작동시키세요.</p>
+                  </div>
               ) : (
-                  <div className="space-y-4">
-                    <AnimatePresence mode="popLayout">
-                      {filteredMeetups.map((meetup) => (
-                          <motion.div
-                              key={meetup.matchingId}
-                              initial={{ opacity: 0, y: 15, scale: 0.98 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, x: -30, scale: 0.95, transition: { duration: 0.2 } }}
-                              layout
-                              className="bg-white border border-[#E5E7EB] rounded-2xl p-5 flex flex-row items-center justify-between gap-4 shadow-[0_2px_12px_rgba(0,0,0,0.01)] hover:border-[#007AFF]/30 transition-colors"
-                          >
-                            <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span className="px-2 py-0.5 bg-[#FFE9E9] text-[#FF4D4D] rounded-md text-[10px] font-black tracking-tight">
+                  /* 스르륵 플래시카드 슬라이더 껍데기 */
+                  <div className="w-full max-w-[360px] flex flex-col items-center space-y-6">
+                    <div className="w-full aspect-[4/5] relative flex items-center justify-center overflow-hidden">
+                      <AnimatePresence mode="wait">
+                        {filteredMeetups.map((meetup, idx) => {
+                          if (idx !== currentCardIdx) return null;
+                          return (
+                              <motion.div
+                                  key={meetup.matchingId}
+                                  initial={{ opacity: 0, x: 100, scale: 0.95 }}
+                                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                                  exit={{ opacity: 0, x: -100, scale: 0.95 }}
+                                  transition={{ type: "spring", stiffness: 300, damping: 28 }}
+                                  drag="x"
+                                  dragConstraints={{ left: 0, right: 0 }}
+                                  onDragEnd={(_, info) => {
+                                    if (info.offset.x < -60) handleNextCard();
+                                    if (info.offset.x > 60) handlePrevCard();
+                                  }}
+                                  className={`w-full h-full bg-white border-2 rounded-[24px] p-6 flex flex-col justify-between shadow-[0_12px_36px_rgba(0,0,0,0.06)] select-none cursor-grab active:cursor-grabbing ${
+                                      currentStreamMode === 'host' ? 'border-amber-200' : 'border-blue-100'
+                                  }`}
+                              >
+                                {/* 카드 탑 구역 */}
+                                <div className="space-y-4 text-left">
+                                  <div className="flex items-center justify-between">
+                                <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-black tracking-tight ${
+                                    currentStreamMode === 'host' ? 'bg-amber-100 text-amber-800' : 'bg-blue-50 text-[#007AFF]'
+                                }`}>
                                   {meetup.status}
                                 </span>
-                                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded-md text-[10px] font-bold flex items-center gap-0.5">
-                                  <MapPin size={10} /> {meetup.country} · {meetup.city}
+                                    <span className="text-[11px] font-bold text-gray-400">
+                                  {currentCardIdx + 1} / {filteredMeetups.length}
                                 </span>
-                              </div>
-                              <h3 className="text-[15px] font-black text-[#222222] truncate">
-                                {meetup.title}
-                              </h3>
-                              <p className="text-xs text-gray-500 line-clamp-1 pr-2">
-                                {meetup.description || '트립메이트와 함께 떠나는 실시간 번개 일정.'}
-                              </p>
-                            </div>
-                            <button
-                                onClick={() => handleAcceptMatching(meetup)}
-                                className="bg-[#007AFF] text-white px-4.5 py-2 rounded-xl font-bold text-xs hover:bg-[#0062CC] transition-all whitespace-nowrap shadow-sm"
-                            >
-                              수락
-                            </button>
-                          </motion.div>
-                      ))}
-                    </AnimatePresence>
+                                  </div>
+
+                                  <div className="space-y-1.5">
+                                    <h3 className="text-lg font-black text-[#222222] leading-snug tracking-tight">
+                                      {meetup.title}
+                                    </h3>
+                                    <div className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-400 bg-slate-50 px-2 py-0.5 rounded">
+                                      <MapPin size={10} /> {meetup.country} · {meetup.city}
+                                    </div>
+                                  </div>
+
+                                  <p className="text-xs text-gray-500 font-medium leading-relaxed min-h-[60px] line-clamp-4">
+                                    {meetup.description}
+                                  </p>
+                                </div>
+
+                                {/* 카드 바텀 액션 단추 구역 */}
+                                <div className="space-y-4 pt-4 border-t border-slate-50">
+                                  <button
+                                      onClick={() => handleAcceptMatching(meetup)}
+                                      className="w-full py-3.5 bg-[#007AFF] hover:bg-blue-600 text-white font-black text-xs rounded-xl shadow-md transition-all"
+                                  >
+                                    {currentStreamMode === 'host' ? '신청 멤버 매칭 수락' : '가이드 매칭 동행 수락'}
+                                  </button>
+                                </div>
+                              </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* 인덱스 수동 전환용 서브 인디케이터 버튼 바 */}
+                    <div className="flex items-center gap-6">
+                      <button
+                          onClick={handlePrevCard}
+                          disabled={currentCardIdx === 0}
+                          className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 disabled:opacity-30 hover:bg-slate-50"
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+                      <span className="text-xs font-black text-slate-800">{currentCardIdx + 1} / {filteredMeetups.length}</span>
+                      <button
+                          onClick={handleNextCard}
+                          disabled={currentCardIdx === filteredMeetups.length - 1}
+                          className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-600 disabled:opacity-30 hover:bg-slate-50"
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
                   </div>
               )}
+
             </div>
           </div>
 
-          {/* 오른쪽 지도 영역 */}
+          {/* 오른쪽 맵 뷰 지표 구역 */}
           <div className="w-full lg:w-[52%] h-[320px] lg:h-auto bg-gray-50 relative shrink-0">
             <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1m2!1s0x0%3A0x0!2zNDDCsDQzJzM0LjIiTiA3M8KwNTYnMTIuMiJX!1m2!1m3!1m2!1s0x0%3A0x0!2zNDDCsDQzJzM0LjIiTiA3M8KwNTYnMTIuMiJX!5e0!3m2!1sko!2skr!4v1700000000000!5m2!1sko!2skr" className="w-full h-full border-none opacity-80" title="Brooklyn Map" />
             <div className="absolute inset-0 bg-[#007AFF]/5 pointer-events-none" />
