@@ -418,7 +418,6 @@ export const MatchingView = () => {
             {
               headers: { 'Authorization': `Bearer ${getAccessToken()}` },
               withCredentials: false,
-              heartbeatTimeout: 120000
             }
         );
         eventSourceRef.current.onerror = (e) => {
@@ -439,7 +438,6 @@ export const MatchingView = () => {
     }, 600);
   };
 
-  // 💡 [요구사항 반영]: 메이트 매칭 도중 방 생성 누를 시 모달 가로채기 차단 브릿지 인터셉터
   const handleTryCreateRoom = () => {
     if (currentStreamMode === 'guest') {
       message.info("진행 중인 메이트 매칭을 끊으시겠습니까? 방을 만들면 호스트 모드로 전환됩니다.");
