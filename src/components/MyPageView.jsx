@@ -404,7 +404,7 @@ const OrderManagement = () => {
     setLoading(true);
     try {
       // 💡 실제 통합 통신용 API 바인딩 구조 채택
-      const res = await axiosInstance.get('/orders/me');
+      const res = await axiosInstance.get('/orders');
       setOrders(res.data?.data?.content || []);
     } catch (e) {
       console.error("주문 목록 로딩 익셉션", e);
@@ -773,7 +773,7 @@ export const MyPageView = () => {
   const { user } = useProfile();
 
   return (
-      <div className="w-full max-w-6xl mx-auto mt-6 flex flex-col lg:flex-row gap-8 mb-12 px-4 font-sans items-stretch min-h-[580px]">
+      <div className="w-full mx-auto mt-6 flex flex-col lg:flex-row gap-8 mb-12 px-4 font-sans items-stretch min-h-[580px]">
         <MyPageSidebar userData={user} />
 
         <main className="flex-1 min-w-0 w-full bg-white border border-[#E5E7EB] rounded-[24px] p-6 md:p-8 shadow-sm">
