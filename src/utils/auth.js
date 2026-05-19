@@ -1,50 +1,26 @@
 export const getHeaders = () => {
-  const token = getToken();
-  const headers = {
-    'Content-Type': 'application/json'
+  const token = getAccessToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
   };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
+};
 
-  return headers;
-}
+export const setTokens = (accessToken, refreshToken) => {
+  localStorage.setItem('ACCESS_TOKEN', accessToken);
+  localStorage.setItem('REFRESH_TOKEN', refreshToken);
+};
 
-export const saveToken = (token) => {
-  sessionStorage.setItem('token', token);
-}
+export const clearTokens = () => {
+  localStorage.removeItem('ACCESS_TOKEN');
+  localStorage.removeItem('REFRESH_TOKEN');
+};
 
-export const getToken = () => {
-  return sessionStorage.getItem('token');
-}
+export const getRefreshToken = () => localStorage.getItem('REFRESH_TOKEN');
 
-export const remoteToken = () => {
-  sessionStorage.removeItem('token');
-}
+export const getAccessToken = () => localStorage.getItem('ACCESS_TOKEN');
 
 export const isLoggedIn = () => {
-  const token = getToken();
-  if (!token) {
-    return false;
-  }
-  return true
-}
-export const saveCompany = (id) => {
-  sessionStorage.setItem('company', id);
-}
-
-export const getCompany = () => {
-  return sessionStorage.getItem('company');
-}
-
-export const removeCompany = () => {
-  sessionStorage.removeItem('remove');
-}
-
-export const hasCompany = () => {
-  const id = getCompany();
-  if (!id) {
-    return false;
-  }
-  return true
+  const token = getAccessToken();
+  return token != null;
 }

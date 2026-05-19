@@ -1,240 +1,190 @@
-import {useRef, useState} from 'react';
-import {Link, useNavigate} from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Form, Input, Button } from 'antd';
+import { Mail, Lock } from 'lucide-react';
 import axios from "../utils/axiosInstance";
 import axiosInstance from "../utils/axiosInstance";
-import {saveToken} from "../utils/auth";
-import {requestForToken} from "../hooks/usePushManager";
-import LogoImg from '../assets/logo.png'
-
-function Form({children}) {
-  return (
-      <div
-          className='flex max-md:gap-3 max-md:flex-col max-md:items-center gap-10 text-transparent3 items-start justify-center w-full'>
-        {children}
-      </div>
-  );
-}
-
-function FormContent({children}) {
-  return <div
-      className='my-5 flex flex-col gap-2 w-[350px] items-end'>{children}</div>;
-}
-
-function Input({
-  id,
-  label,
-  type = 'text',
-  placeholder,
-  value,
-  onChange,
-  inputRef,
-  message,
-}) {
-  return (
-      <div className='flex gap-4 w-full'>
-        <div className='relative w-full'>
-          <input
-              ref={inputRef}
-              className={`shadow appearance-none border ${
-                  message?.type === 'error' && 'border-error'
-              } rounded-[12px] py-[12px] px-2 w-full leading-tight focus:outline-none focus:shadow-outline`}
-              id={id}
-              type={type}
-              placeholder={placeholder}
-              value={value}
-              onChange={onChange}
-          />
-        </div>
-      </div>
-  );
-}
-
-function FormFooter({children}) {
-  return (
-      <div
-          className='mt-4 w-full flex-row flex gap-2 justify-between'>
-        {children}
-      </div>
-  );
-}
-
-function SubmitButton({onClick, disabled, children}) {
-  return (
-      <div className='flex items-center justify-between max-md:w-full w-full'>
-        <button
-            className='bg-blue-600 w-full py-[12px] rounded-[12px] disabled:bg-transparent1 disabled:pointer-events-none hover:opacity-55 text-white font-bold px-20 focus:outline-none focus:shadow-outline'
-            type='button'
-            disabled={disabled}
-            onClick={onClick}
-        >
-          {children}
-        </button>
-      </div>
-  );
-}
+import { requestForToken } from "../hooks/usePushManager";
+import LogoImg from '@/assets/images/logo.png';
+import CustomModal from "@components/CustomModal.jsx";
+import { setTokens } from "@utils/auth.js";
 
 export default function LoginPage() {
-  const [id, setId] = useState('');
-  const [password, setPassword] = useState('');
-  // const { setUserProfile } = userDataStore();
+  const [form] = Form.useForm();
   const navigate = useNavigate();
-  const [messages, setMessages] = useState({id: '', password: ''});
-  const idRef = useRef(null);
-  const passwordRef = useRef(null);
+  const [loading, setLoading] = useState(false);
 
-  // 모달 관련 상태
-  const [modal_open, set_modal_open] = useState(false);
-  const [modal_message, set_modal_message] = useState('');
+  // 모달 제어를 위한 제반 상태 정의
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalContent, setModalContent] = useState('');
+  const [modalType, setModalType] = useState('SUCCESS'); // SUCCESS 또는 ERROR 분류
 
-  const handleLogin = async () => {
-    const newMessages = {id: '', password: ''};
-    let hasError = false;
-
-    if (id === '') {
-      newMessages.id = {type: 'error', text: '아이디를 입력해주세요.'};
-      hasError = true;
-    }
-
-    if (password === '') {
-      newMessages.password = {
-        type: 'error',
-        text: '비밀번호를 입력해주세요.',
-      };
-      hasError = true;
-    }
-
-    setMessages(newMessages);
-
-    if (hasError) {
-      if (newMessages.id) {
-        idRef.current?.focus();
-      } else if (newMessages.password) {
-        passwordRef.current?.focus();
-      }
-      return;
-    }
+  // 로그인 처리 핸들러
+  const handleLogin = async (values) => {
+    const { email, password } = values;
+    setLoading(true);
 
     try {
-      const accessToken = await login(id, password);
+      // 로그인 API 호출
+      const accessToken = await login(email, password);
+
       if (accessToken) {
+        // 푸시 알림 토큰 등록 로직
         try {
           const deviceData = await requestForToken();
           if (deviceData) {
             const response = await axiosInstance.post(
-                "/notifications/tokens/me", {
-                  ...deviceData,
-                  channelType: "PUSH"
-                }, {
-                  headers: {
-                    Authorization: `Bearer ${accessToken}`
-                  }
-                })
+                "/notifications/tokens/me",
+                { ...deviceData, channelType: "PUSH" },
+                { headers: { Authorization: `Bearer ${accessToken}` } }
+            );
             console.log("토큰 갱신 성공 : ", response);
           }
         } catch (e) {
-          console.log(e);
+          console.error("푸시 토큰 등록 실패:", e);
         }
-        // const userData = await getUserData();
-        // setUserProfile(userData);
 
-        // 로그인 성공 -> 모달 띄움
-        // set_modal_message('로그인에 성공했습니다!');
-        alert('로그인에 성공하였습니다.');
-        navigate('/');
-        // set_modal_open(true);
+        // 로그인 성공 시 모달 상태 세팅
+        setModalType('SUCCESS');
+        setModalTitle('로그인 성공');
+        setModalContent('로그인에 성공하였습니다. 메인 페이지로 이동하시겠습니까?');
+        setIsModalOpen(true);
       } else {
-        // 로그인 실패 -> 모달 띄움
-        alert('아이디 또는 비밀번호를 확인해주세요.');
-        // set_modal_open(true);
+        // 로그인 실패 시 모달 알림
+        setModalType('ERROR');
+        setModalTitle('로그인 실패');
+        setModalContent('아이디 또는 비밀번호를 다시 확인해주세요.');
+        setIsModalOpen(true);
       }
     } catch (error) {
-      alert('로그인 중 에러가 발생했습니다: ' + error.message);
-      // set_modal_open(true);
+      console.error(error);
+      setModalType('ERROR');
+      setModalTitle('로그인 에러');
+      setModalContent(error.message || '로그인 중 예기치 못한 에러가 발생했습니다.');
+      setIsModalOpen(true);
+    } finally {
+      setLoading(false);
     }
   };
 
+  // 모달 닫기 버튼 핸들러
   const handleModalClose = () => {
-    set_modal_open(false);
-    // 로그인 성공했을 때는 메인으로 이동
-    if (modal_message === '로그인에 성공했습니다!') {
-      navigate('/');
-    }
+    setIsModalOpen(false);
   };
 
   return (
-      <div
-          className='flex absolute top-0 left-0 right-0 bg-white z-[100] justify-center items-center h-full w-full'>
-        <Form>
-          <FormContent>
-            <div
-                className="flex items-center justify-center gap-2 w-full py-[20px]">
-              <img className={"h-[70px]"} src={LogoImg}/>
+      <div className='flex absolute top-0 left-0 right-0 bg-white z-[100] justify-center items-center h-full w-full p-4 overflow-y-auto'>
+        <div className='flex flex-col gap-2 w-full max-w-[400px] items-center my-8'>
 
-            </div>
-            <Input
-                inputRef={idRef}
-                id='id'
-                label='아이디'
-                type='text'
-                placeholder='아이디를 입력하세요'
-                value={id}
-                message={messages.id}
-                onChange={(e) => {
-                  setId(e.target.value);
-                  setMessages((prev) => ({...prev, id: null}));
-                }}
-            />
-            <Input
-                inputRef={passwordRef}
-                id='password'
-                label='비밀번호'
-                type='password'
-                placeholder='비밀번호를 입력하세요'
-                value={password}
-                message={messages.password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setMessages((prev) => ({...prev, password: null}));
-                }}
-            />
+          {/* 로고 영역 */}
+          <div className="flex items-center justify-center gap-2 w-full py-[20px]">
+            <img className="h-[70px] object-contain" src={LogoImg} alt="Logo" />
+          </div>
 
-            <SubmitButton onClick={handleLogin}>로그인</SubmitButton>
-            <FormFooter>
-              <Link
-                  to='/membership'
-                  className='text-sm text-gray-600 hover:underline'
+          {/* Ant Design Form */}
+          <Form
+              form={form}
+              name="login_form"
+              layout="vertical"
+              onFinish={handleLogin}
+              className="w-full"
+              requiredMark={false}
+          >
+            <Form.Item
+                name="email"
+                rules={[
+                  { required: true, message: '이메일을 입력해주세요.' },
+                  { type: 'email', message: '올바른 이메일 형식이 아닙니다.' }
+                ]}
+            >
+              <Input
+                  prefix={<Mail size={18} className="text-gray-400 mr-1" />}
+                  placeholder="이메일을 입력하세요"
+                  className="py-[10px] rounded-[12px]"
+              />
+            </Form.Item>
+
+            <Form.Item
+                name="password"
+                rules={[{ required: true, message: '비밀번호를 입력해주세요.' }]}
+            >
+              <Input.Password
+                  prefix={<Lock size={18} className="text-gray-400 mr-1" />}
+                  placeholder="비밀번호를 입력하세요"
+                  className="py-[10px] rounded-[12px]"
+              />
+            </Form.Item>
+
+            <Form.Item className="mt-6">
+              <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={loading}
+                  className="w-full h-[48px] bg-blue-600 hover:bg-blue-500 rounded-[12px] font-bold text-base border-none shadow-md"
               >
-                회원가입
+                로그인
+              </Button>
+            </Form.Item>
+          </Form>
+
+          {/* 하단 푸터 링크 */}
+          <div className='mt-2 w-full flex flex-row justify-between text-sm text-gray-500 px-1'>
+            <Link to='/membership' className='hover:underline text-gray-600'>
+              회원가입
+            </Link>
+            <div className='flex gap-5'>
+              <Link to='/find-id' className='hover:underline text-gray-600'>
+                아이디 찾기
               </Link>
-              <div className='flex gap-5'>
-                <Link
-                    to='/find-id'
-                    className='text-sm text-gray-600 hover:underline'
-                >
-                  아이디 찾기
-                </Link>
-                <Link
-                    to='/find-password'
-                    className='text-sm text-gray-600 hover:underline'
-                >
-                  비밀번호 찾기
-                </Link>
-              </div>
-            </FormFooter>
-          </FormContent>
-        </Form>
+              <Link to='/find-password' className='hover:underline text-gray-600'>
+                비밀번호 찾기
+              </Link>
+            </div>
+          </div>
 
-        {modal_open && (
-            <Modal title='로그인 성공' onClose={handleModalClose}>
-              <span>메인 페이지로 이동하시겠습니까?</span>
-              <button
-                  onClick={handleModalClose}
-                  className='bg-base1 hover:opacity-75 text-white font-bold py-2 px-6 rounded'
-              >
-                확인
-              </button>
-            </Modal>
-        )}
+        </div>
+
+        {/* 4. 공통 모달 마운트 (buttons 매개변수 구조로 전면 교체) */}
+        <CustomModal
+            isOpen={isModalOpen}
+            onClose={handleModalClose}
+            title={modalTitle}
+            buttons={
+              modalType === 'SUCCESS' ? (
+                  <div className="flex gap-2 w-full">
+                    <button
+                        type="button"
+                        onClick={() => setIsModalOpen(false)}
+                        className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-[14px] text-xs font-bold hover:bg-gray-200 transition-colors"
+                    >
+                      머무르기
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                          setIsModalOpen(false);
+                          navigate('/');
+                        }}
+                        className="flex-[2] py-3 bg-blue-600 text-white rounded-[14px] text-xs font-bold hover:bg-blue-500 transition-colors shadow-sm"
+                    >
+                      이동하기
+                    </button>
+                  </div>
+              ) : (
+                  // 실패했을 때 띄울 가로 100% 꽉 차는 단일 확인 버튼 (시안 스타일 가이드 일치)
+                  <button
+                      type="button"
+                      onClick={handleModalClose}
+                      className="w-full py-3 bg-[#FF4D4D] hover:bg-red-600 text-white rounded-[14px] text-xs font-black transition-colors shadow-md"
+                  >
+                    확인
+                  </button>
+              )
+            }
+        >
+          <p className="text-gray-700 font-medium text-center py-2">{modalContent}</p>
+        </CustomModal>
       </div>
   );
 }
@@ -246,13 +196,15 @@ export async function login(user_id, password) {
       password,
     });
     const data = await response.data;
-    if (data.success) {
-      console.log(data.data);
-      saveToken(data.data.accessToken);
-      return data.data.accessToken;
+    if (data && (data.success || data.accessToken)) {
+      const accessToken = data.data?.accessToken || data.accessToken;
+      const refreshToken = data.data?.refreshToken || data.refreshToken;
+      setTokens(accessToken, refreshToken);
+      return accessToken;
     }
+    return false;
   } catch (error) {
-    console.log(error);
+    console.error(error);
     return false;
   }
 }

@@ -1,19 +1,15 @@
 import  {createContext, useContext, useEffect, useState} from 'react';
 import axiosInstance from "../utils/axiosInstance";
-import {getCompany, hasCompany} from "../utils/auth";
 
-// 1. Context 생성
 const CompanyProfileContext = createContext();
 
-// 2. Provider 컴포넌트
 export const CompanyProfileProvider = ({children}) => {
   const [company, setCompany] = useState(
       null);
 
-  const fetchAllData = async () => {
-    const companyId = getCompany();
+  const fetchData = async () => {
     try {
-      const response = await axiosInstance.get(`/companies/${companyId}`);
+      const response = await axiosInstance.get(`/companies/me`);
       console.log(response.data);
       setCompany(response.data.data);
     } catch (e) {
@@ -22,9 +18,7 @@ export const CompanyProfileProvider = ({children}) => {
   };
 
   useEffect(() => {
-    if (hasCompany()) {
-      fetchAllData();
-    }
+      fetchData();
   }, []);
   return (
       <CompanyProfileContext.Provider value={{company, setCompany}}>

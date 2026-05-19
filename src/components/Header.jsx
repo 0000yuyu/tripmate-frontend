@@ -1,6 +1,6 @@
 import {useState} from "react";
 import {useNavigate} from "react-router-dom";
-import LogoRowImg from "../assets/logo_row.png";
+import LogoRowImg from "../assets/images/logo_row.png";
 import {CiUser} from "react-icons/ci";
 import {IoIosNotificationsOutline} from "react-icons/io";
 
@@ -51,7 +51,7 @@ export default function Header({activeTab, onTabChange}) {
             >
             </button>
             <button className="text-gray-600 hover:text-blue-500"
-                    onClick={() => navigate("/notifications")}>
+                    onClick={() => navigate("/profile")}>
               <CiUser color={"black"}  strokeWidth={0.5} size={25}/>
             </button>
             {/* 알림 */}
