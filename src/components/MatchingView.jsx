@@ -398,7 +398,6 @@ export const MatchingView = () => {
     setMeetUps([]);
     setCurrentCardIdx(0);
 
-    setTimeout(() => {
       setIsMatchingLoading(false);
       setCurrentStreamMode(type);
 
@@ -434,7 +433,6 @@ export const MatchingView = () => {
       } catch (e) {
         console.log(e);
       }
-    }, 600);
   };
 
   const handleTryCreateRoom = () => {
