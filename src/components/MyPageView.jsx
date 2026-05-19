@@ -15,6 +15,7 @@ import { useProfile } from "@hooks/userContext.jsx";
 import axiosInstance from "@/utils/axiosInstance";
 import {message} from "antd";
 import {useCompanyProfile} from "@hooks/companyContext.jsx";
+import {clearTokens} from "@utils/auth.js";
 
 const HostManagement = () => {
   const [subTab, setSubTab] = useState('hosting');
@@ -219,6 +220,15 @@ const MyPageSidebar = ({ userData }) => {
           ${isActive('profile-manage') ? 'bg-[#F0F7FF] text-[#007AFF]' : 'text-gray-500 hover:bg-gray-50'}`}>
             <User size={16} className={isActive('profile-manage') ? 'text-[#007AFF]' : 'text-gray-400'} />
             <span>내 정보 관리</span>
+            <button
+                onClick={async ()=> {
+                  await clearTokens();
+                  window.location.reload();
+                }}
+                className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl text-xs font-bold transition-all 
+          ${isActive('profile-manage') ? 'bg-[#F0F7FF] text-[#007AFF]' : 'text-gray-500 hover:bg-gray-50'}`}>
+              <span>로그아웃</span>
+            </button>
           </button>
           <Link to="/profile/company" className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl text-xs font-bold transition-all 
           ${isActive('company') ? 'bg-[#F0F7FF] text-[#007AFF]' : 'text-gray-500 hover:bg-gray-50'}`}>
