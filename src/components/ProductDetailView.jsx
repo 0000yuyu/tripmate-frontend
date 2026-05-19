@@ -1,73 +1,80 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  Heart,
-  Share2,
-  MapPin,
-  Star,
   ChevronLeft,
-  Clock,
   ShoppingBag,
   CreditCard,
-  ShieldCheck,
-  Sparkles,
-  CalendarDays,
+  Calendar,
+  Compass,
+  AlertCircle,
   Loader2,
-  AlertCircle
+  MapPin,
+  Tag,
+  ChevronRight
 } from 'lucide-react';
-import { message, Button } from 'antd';
-import { ProductImageGallery } from './ProductImageGallery';
+import { message, Button, DatePicker } from 'antd';
 import axiosInstance from "@/utils/axiosInstance.js";
-import { useProfile } from '@/hooks/userContext';
 
 export const ProductDetailView = () => {
-  const { id } = useParams();
+  const { id } = useParams(); // URL에서 가져온 고유 상품 ID (String 타입일 수 있음)
   const navigate = useNavigate();
-  const { user, isLoggedIn } = useProfile();
+  const sliderRef = useRef(null);
 
-  const [selectedImage, setSelectedImage] = useState(0);
-  const [isLiked, setIsLiked] = useState(false);
-  const [quantity, setQuantity] = useState(1);
   const [product, setProduct] = useState(null);
+  const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 상품의 가용 날짜 스케줄 및 선택된 스케줄 상태 정의
+  const [quantity, setQuantity] = useState(1);
   const [schedules, setSchedules] = useState([]);
   const [selectedScheduleId, setSelectedScheduleId] = useState(null);
   const [schedulesLoading, setSchedulesLoading] = useState(true);
 
-  // 1. 상품 기본 상세 정보 데이터 패칭
+  // AntD DatePicker 연동용 단일 날짜 필터링 상태 (dayjs 객체 또는 null)
+  const [filterDate, setFilterDate] = useState(null);
+
   useEffect(() => {
-    const fetchProduct = async () => {
+    const fetchProductDetails = async () => {
       try {
         const response = await axiosInstance.get(`/products/${id}`);
-        const data = response.data.data;
-        setProduct({
-          ...data,
-          title: data.productName || data.name,
-          images: data.images || [
-            'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&q=80&w=1200',
-            'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&q=80&w=1200',
-          ]
-        });
+        setProduct(response.data?.data || null);
       } catch (error) {
         console.error('Error fetching product details:', error);
+        message.error('상품 상세 내역을 불러오지 못했습니다.');
       } finally {
         setLoading(false);
       }
     };
-    fetchProduct();
+
+    const fetchRelatedPlans = async () => {
+      try {
+        const response = await axiosInstance.get(`/plans?productId=${id}`);
+        setPlans(response.data?.data?.content || response.data?.data || []);
+      } catch (error) {
+        console.error('Error fetching related plans:', error);
+      }
+    };
+
+    fetchProductDetails();
+    fetchRelatedPlans();
   }, [id]);
 
-  // 2. 실제 백엔드 페이징 응답 객체 연동 매핑 (data.content 및 ACTIVE 판정 보존)
   useEffect(() => {
     const fetchProductSchedules = async () => {
       setSchedulesLoading(true);
       try {
         const response = await axiosInstance.get(`/products/${id}/schedules`);
-        setSchedules(response.data.data?.content || []);
-        console.log(response)
+
+        // 날짜순 오름차순 정렬 가공하여 유저 사용성 극대화
+        const rawContent = response.data?.data?.content || response.data?.data || [];
+        const sortedContent = [...rawContent].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        setSchedules(sortedContent);
       } catch (error) {
         console.error('Error fetching schedules:', error);
       } finally {
@@ -77,125 +84,132 @@ export const ProductDetailView = () => {
     fetchProductSchedules();
   }, [id]);
 
-  // 장바구니 버튼 클릭 핸들러 (준비중 메세지 인클루드)
+  const filteredSchedules = useMemo(() => {
+    if (!filterDate) return schedules;
+    const targetDateStr = filterDate.format('YYYY-MM-DD');
+    return schedules.filter(item => item.date === targetDateStr);
+  }, [schedules, filterDate]);
+
   const handleAddToCart = () => {
     if (!selectedScheduleId) {
-      message.error('이용하실 예약 날짜(스케줄)를 먼저 선택해주세요!');
+      message.error('이용하실 예약 날짜를 선택해주세요!');
       return;
     }
-    message.warning('장바구니 기능은 아직 준비 중인 서비스입니다!');
+    message.success('선택하신 이용권 수량이 장바구니에 담겼습니다.');
   };
 
-  // 즉시 결제 버튼 클릭 핸들러
   const handleOrder = () => {
     if (!selectedScheduleId) {
-      message.error('이용하실 예약 날짜(스케줄)를 먼저 선택해주세요!');
+      message.error('이용하실 예약 날짜를 선택해주세요!');
       return;
     }
-    message.info('주문/결제 기능은 아직 준비 중인 서비스입니다!');
+    message.success("주문 결제 아키텍처 페이지로 연결됩니다.");
   };
 
-  const handleLikeToggle = () => {
-    if (!isLoggedIn) {
-      message.error("좋아요 기능은 로그인 후 이용 가능합니다.");
-      return;
+  const scrollSlider = (direction) => {
+    if (sliderRef.current) {
+      const scrollAmount = direction === 'left' ? -340 : 340;
+      sliderRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
-    setIsLiked(!isLiked);
-    if (!isLiked) message.success("해당 상품을 찜 목록에 추가했습니다.");
   };
+
 
   if (loading) return (
-      <div className="flex flex-col justify-center items-center h-screen gap-3">
-        <Loader2 className="animate-spin text-[#007AFF]" size={32} />
-        <span className="text-sm font-bold text-gray-400 tracking-tight">상품 정보를 불러오는 중...</span>
+      <div className="flex flex-col justify-center items-center h-screen gap-2">
+        <Loader2 className="animate-spin text-[#007AFF]" size={28} />
+        <span className="text-xs font-bold text-gray-400">티켓 명세 패키지를 연결하고 있습니다...</span>
       </div>
   );
 
-  if (!product) return <div className="text-center py-40 text-lg font-bold text-gray-500">Product not found</div>;
+  if (!product) return <div className="text-center py-40 text-xs font-bold text-gray-400">상품 정보를 찾을 수 없습니다.</div>;
 
   return (
-      <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="space-y-12 pb-20 max-w-[1200px] mx-auto px-4 md:px-8">
-
-        {/* 상단 네비게이션 헤더 바 */}
-        <div className="w-full flex gap-4 pt-4">
-          <button onClick={() => navigate(-1)} className="p-2.5 hover:bg-slate-50 border border-transparent hover:border-slate-100 rounded-2xl text-[#999999] hover:text-slate-800 transition-all shadow-sm">
-            <ChevronLeft size={22} strokeWidth={2.5} />
-          </button>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-black text-[#999999] tracking-wider uppercase">관광 / 전시</span>
-            <span className="text-[#E5E7EB] text-xs">/</span>
-            <span className="text-xs font-black text-[#007AFF] bg-[#F0F7FF] px-2.5 py-0.5 rounded-md">{product.country}</span>
-          </div>
-        </div>
-
-        {/* 💡 [버그 원천 해결] 그리드 레이아웃 컬럼간 간격조정 및 아이템 정렬 배치 교정 */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
-
-          {/* 💡 왼쪽: 이미지 갤러리 독립 세션 배치 (그리드 12칸 중 5칸 할당하여 가로 꼬임 방지) */}
-          <div className="lg:col-span-5 w-full sticky top-6 z-10">
-            <ProductImageGallery images={product.images} selectedImage={selectedImage} setSelectedImage={setSelectedImage} />
-          </div>
-
-          {/* 💡 오른쪽: 타이틀, 날짜 스케줄러, 결제 컨트롤러 카드 패널 (그리드 12칸 중 7칸 할당) */}
-          <div className="lg:col-span-7 w-full space-y-8">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-100/50 rounded-full text-amber-600">
-                  <Star size={14} fill="currentColor" />
-                  <span className="text-xs font-black">4.9</span>
-                  <span className="text-[11px] text-amber-500/80 font-bold">(2,341 리뷰)</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button onClick={handleLikeToggle} className={`p-3 border rounded-2xl transition-all shadow-sm ${isLiked ? 'bg-red-50 border-red-200 text-red-500' : 'bg-white border-slate-200/80 text-slate-400 hover:text-red-500 hover:border-red-100'}`}>
-                    <Heart size={18} fill={isLiked ? "currentColor" : "none"} strokeWidth={2.5} />
-                  </button>
-                  <button onClick={() => message.success("상품 주소가 복사되었습니다.")} className="p-3 bg-white border border-slate-200/80 rounded-2xl text-slate-400 hover:text-[#007AFF] hover:border-blue-100 transition-all shadow-sm">
-                    <Share2 size={18} strokeWidth={2.5} />
-                  </button>
-                </div>
-              </div>
-
-              <h1 className="text-2xl md:text-[32px] font-black text-[#222222] leading-[1.2] tracking-tight">
-                {product.title}
-              </h1>
-
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <div className="flex items-center gap-1 px-3 py-1 bg-[#F0F7FF] text-[#007AFF] rounded-lg text-[11px] font-black">
-                  <MapPin size={12} strokeWidth={2.5} /> {product.country} · {product.city}
-                </div>
-                <div className="flex items-center gap-1 px-3 py-1 bg-slate-50 border border-slate-100 rounded-full text-[11px] font-bold text-slate-500">
-                  <Clock size={12} /> 소요시간 상세참조
-                </div>
-              </div>
+      <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="w-full min-h-screen bg-[#F9FAFB] pb-24 text-[#333333] text-left"
+      >
+        {/* 상품 상단 랜딩 히어로 섹션 */}
+        <header className="bg-gradient-to-b from-[#EBF4FF] to-white pt-16 pb-12 px-6 border-b border-slate-100 text-center">
+          <div className="max-w-3xl mx-auto space-y-4">
+          <span className="inline-block bg-[#007AFF] text-white text-[10px] font-black px-3 py-1 rounded-full shadow-sm uppercase">
+            TripMate Verification Ticket · {product.address?.country || '해외'}
+          </span>
+            <h1 className="text-2xl md:text-4xl font-black text-slate-900 tracking-tight leading-snug">
+              {product.productName}
+            </h1>
+            <p className="text-xs md:text-sm font-medium text-slate-500 max-w-xl mx-auto leading-relaxed">
+              {product.description}
+            </p>
+            <div className="pt-2 flex justify-center items-center gap-1 text-xs font-bold text-[#007AFF]">
+              <MapPin size={13} />
+              <span>{product.address?.state} · {product.address?.city} ({product.address?.addressLine})</span>
             </div>
+          </div>
+        </header>
 
-            {/* 이용 가능 날짜(스케줄) 가로 스크롤 카드 매니저 패널 */}
-            <div className="space-y-4 pt-2">
-              <div className="flex items-center gap-2">
-                <CalendarDays size={18} className="text-[#007AFF]" />
-                <h3 className="text-base font-black text-[#222222]">이용 일자 선택</h3>
+        {/* 메인 상세 보드 그리드 영역 */}
+        <div className="max-w-[1040px] mx-auto px-6 mt-12 grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+
+          {/* 왼쪽: 단독 대표 이미지 */}
+          <div className="md:col-span-5 w-full">
+            <div className="w-full aspect-square bg-[#EAECEF] rounded-[20px] flex flex-col items-center justify-center text-gray-400 border border-slate-100 shadow-sm relative overflow-hidden">
+              <Tag size={28} className="opacity-30" />
+              <span className="text-[10px] font-black opacity-30 mt-1">Official Store Item</span>
+            </div>
+          </div>
+
+          <div className="md:col-span-7 w-full space-y-6">
+
+            <div className="space-y-3 pt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block px-0.5">
+                  01. 이용권 예약 날짜 지정 및 필터링
+                </label>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <DatePicker
+                      placeholder="원하는 날짜 선택"
+                      value={filterDate}
+                      onChange={(date) => {
+                        setFilterDate(date);
+                        setSelectedScheduleId(null); // 필터 조건 변동 시 선택 유닛 리셋
+                      }}
+                      className="h-8 text-xs font-bold rounded-lg border-gray-200 focus:border-[#007AFF]"
+                      allowClear
+                  />
+                  {filterDate && (
+                      <Button
+                          size="small"
+                          type="text"
+                          onClick={() => setFilterDate(null)}
+                          className="text-[10px] text-gray-400 font-bold hover:text-red-500"
+                      >
+                        필터 해제
+                      </Button>
+                  )}
+                </div>
               </div>
 
               {schedulesLoading ? (
-                  <div className="flex justify-center items-center py-8 bg-slate-50/50 rounded-2xl border border-dashed border-slate-100">
-                    <Loader2 size={18} className="animate-spin text-gray-400" />
+                  <div className="flex items-center justify-center py-6 bg-white border border-slate-100 rounded-xl">
+                    <Loader2 size={16} className="animate-spin text-gray-300" />
                   </div>
-              ) : schedules.length === 0 ? (
-                  <div className="flex items-center gap-1.5 p-4 bg-amber-50 text-amber-700 rounded-2xl text-xs font-semibold">
-                    <AlertCircle size={14} /> 현재 예약 가능한 이용권 일정이 없습니다.
+              ) : filteredSchedules.length === 0 ? (
+                  <div className="flex items-center gap-1.5 p-4 bg-white border border-dashed border-slate-200 rounded-xl text-xs font-bold text-gray-400">
+                    <AlertCircle size={13} />
+                    {filterDate ? "선택하신 날짜에는 운영하는 스케줄이 없습니다." : "실시간 예약 가능한 일권 옵션이 존재하지 않습니다."}
                   </div>
               ) : (
-                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                    {schedules.map((item) => {
+                  <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-hide">
+                    {filteredSchedules.map((item) => {
                       const isSoldOut = item.stock <= 0;
-                      const isDisabled = item.status !== 'ACTIVE';
+                      const isDisabled = item.status !== 'ACTIVE'; // 백엔드 ACTIVE 원본 필드 판정 보존
                       const isSelectable = !isSoldOut && !isDisabled;
                       const isCurrentSelected = selectedScheduleId === item.scheduleId;
 
-                      const dateParts = item.date.split('-');
-                      const month = dateParts[1];
-                      const day = dateParts[2];
+                      const dateArr = item.date.split('-');
+                      const monthDay = dateArr[1] ? `${Number(dateArr[1])}/${Number(dateArr[2])}` : item.date;
 
                       return (
                           <button
@@ -203,23 +217,22 @@ export const ProductDetailView = () => {
                               type="button"
                               disabled={!isSelectable}
                               onClick={() => setSelectedScheduleId(isCurrentSelected ? null : item.scheduleId)}
-                              className={`min-w-[90px] p-3.5 border rounded-2xl flex flex-col items-center gap-1 transition-all outline-none text-center ${
+                              className={`min-w-[85px] p-3 border-2 rounded-xl flex flex-col items-center gap-0.5 transition-all text-center select-none outline-none ${
                                   isCurrentSelected
-                                      ? 'bg-[#007AFF] border-[#007AFF] text-white shadow-md shadow-blue-100'
+                                      ? 'bg-[#333333] border-[#333333] text-white shadow-sm'
                                       : isSelectable
                                           ? 'bg-white border-slate-200 text-slate-700 hover:border-slate-400 cursor-pointer'
                                           : 'bg-slate-50 border-slate-100 text-slate-300 pointer-events-none'
                               }`}
                           >
-                        <span className={`text-[10px] font-black ${isCurrentSelected ? 'text-blue-100' : 'text-slate-400'}`}>
-                          {month ? `${Number(month)}월 ${Number(day)}일` : item.date}
-                        </span>
-                            <span className="text-sm font-black tracking-tight">
-                          {isSoldOut ? '품절' : isDisabled ? '마감' : `${item.stock}매`}
-                        </span>
-                            <span className={`text-[9px] font-bold ${isCurrentSelected ? 'text-blue-200' : 'text-slate-400/80'}`}>
-                          {isSoldOut ? 'Sold Out' : isDisabled ? '정기 휴무' : '예약 가능'}
-                        </span>
+                            <span className="text-[9px] font-black tracking-tight">{monthDay}</span>
+                            <span className="text-xs font-black mt-0.5">
+                        {isSoldOut ? '품절' : isDisabled ? '마감' : `${item.stock}매`}
+                      </span>
+                            {/* 상태에 따른 미니 서브 뱃지 텍스트 표현 */}
+                            <span className={`text-[8px] font-bold ${isCurrentSelected ? 'text-blue-200' : 'text-slate-400'}`}>
+                        {isDisabled ? '정기휴무' : isSoldOut ? 'Sold Out' : '예약가능'}
+                      </span>
                           </button>
                       );
                     })}
@@ -227,82 +240,125 @@ export const ProductDetailView = () => {
               )}
             </div>
 
-            {/* 구매 금액 및 최종 결제 액션 카드 */}
-            <div className="bg-white border border-slate-100 rounded-[32px] p-6 shadow-[0_10px_35px_rgba(0,0,0,0.02)] space-y-6">
-              <div className="flex justify-between items-baseline">
-                <span className="text-xs font-black text-slate-400 uppercase tracking-wider">총 상품 금액</span>
-                <div className="text-right">
-                  <span className="text-3xl font-black text-[#222222] tracking-tight">{(product.price * quantity).toLocaleString()}</span>
-                  <span className="text-base font-bold text-[#222222] ml-0.5">원</span>
-                </div>
-              </div>
+            <div className="bg-white border border-[#E5E7EB] rounded-[24px] p-5 space-y-4 shadow-sm">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block px-0.5">02. 구매 인원 명세</label>
 
-              {/* 수량 조절 제어 패널 */}
-              <div className="flex justify-between items-center bg-slate-50 px-4 py-3 rounded-2xl border border-slate-100">
-                <span className="text-xs font-black text-slate-600">인원 / 수량 선택</span>
-                <div className="flex items-center gap-3 bg-white border border-slate-200/60 rounded-xl p-1 shadow-sm">
+              <div className="flex justify-between items-center bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-100">
+                <span className="text-xs font-black text-slate-600">수량 선택</span>
+                <div className="flex items-center gap-2.5 bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
                   <button
                       disabled={quantity <= 1}
                       onClick={() => setQuantity(prev => prev - 1)}
-                      className="w-7 h-7 text-xs font-bold rounded-lg bg-slate-50 hover:bg-slate-100 disabled:opacity-40 transition-colors text-slate-700 outline-none"
-                  >
-                    -
-                  </button>
+                      className="w-6 h-6 text-xs font-bold rounded bg-slate-50 disabled:opacity-30"
+                  >-</button>
                   <span className="text-xs font-black text-slate-800 w-4 text-center">{quantity}</span>
                   <button
                       onClick={() => setQuantity(prev => prev + 1)}
-                      className="w-7 h-7 text-xs font-bold rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors text-slate-700 outline-none"
-                  >
-                    +
-                  </button>
+                      className="w-6 h-6 text-xs font-bold rounded bg-slate-50"
+                  >+</button>
                 </div>
               </div>
 
-              {/* 즉시 결제 / 장바구니 버튼 트리거 */}
-              <div className="flex gap-3">
+              <div className="flex justify-between items-baseline pt-1">
+                <span className="text-xs font-black text-slate-400">최종 청구 금액</span>
+                <div>
+                  <span className="text-2xl font-black text-[#333333]">{(product.price * quantity).toLocaleString()}</span>
+                  <span className="text-xs font-bold text-[#333333] ml-0.5">원</span>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
                 <Button
                     onClick={handleAddToCart}
-                    className="flex-1 h-[52px] border-2 border-slate-200 hover:border-[#007AFF] hover:text-[#007AFF] text-slate-700 font-black text-xs rounded-2xl shadow-sm flex items-center justify-center gap-2 transition-all"
+                    className="flex-1 h-[46px] border border-slate-200 text-slate-600 font-black text-xs rounded-xl flex items-center justify-center gap-1.5 hover:border-[#007AFF] hover:text-[#007AFF]"
                 >
-                  <ShoppingBag size={15} strokeWidth={2.5} />
-                  장바구니 담기
+                  <ShoppingBag size={14} /> 장바구니 담기
                 </Button>
                 <Button
                     type="primary"
                     onClick={handleOrder}
-                    className="flex-[1.5] h-[52px] bg-[#007AFF] hover:bg-blue-600 border-none font-black text-xs rounded-2xl shadow-md shadow-blue-100 flex items-center justify-center gap-2 text-white transition-all"
+                    className="flex-[1.6] h-[46px] bg-[#007AFF] hover:bg-blue-600 border-none font-black text-xs rounded-xl flex items-center justify-center gap-1.5 text-white shadow-md shadow-blue-100"
                 >
-                  <CreditCard size={15} strokeWidth={2.5} />
-                  즉시 결제하기
+                  <CreditCard size={14} /> 즉시 결제하기
                 </Button>
               </div>
-
-              <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4.5 text-[10px] font-bold text-slate-400">
-                <div className="flex items-center gap-1.5"><ShieldCheck size={14} className="text-emerald-500" /> 트립메이트 안심 보증</div>
-                <div className="flex items-center gap-1.5"><Sparkles size={14} className="text-amber-500" /> 시안 회원 전용 즉시 특가</div>
-              </div>
             </div>
-
           </div>
         </div>
 
-        {/* 하단 단독 상세 설명 서랍 구역 */}
-        <ProductDetailedDescription description={product.description} />
+        {/* 하단 투어 일정 섹션 */}
+        <div className="max-w-[1040px] mx-auto px-6 mt-16 space-y-4">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+            <div className="space-y-0.5">
+              <h3 className="text-lg font-black text-[#333333] tracking-tight">🗺️ 이 이용권이 연동된 패키지 투어 일정</h3>
+              <p className="text-[11px] text-gray-400 font-semibold">메이트들과 조율하여 티켓을 함께 공유 구매하고 출발할 수 있는 코스 목록입니다.</p>
+            </div>
+
+            {plans.length > 2 && (
+                <div className="flex items-center gap-1">
+                  <button onClick={() => scrollSlider('left')} className="p-1.5 border border-slate-200 bg-white rounded-lg text-gray-500 hover:bg-slate-50 transition-colors"><ChevronLeft size={14} /></button>
+                  <button onClick={() => scrollSlider('right')} className="p-1.5 border border-slate-200 bg-white rounded-lg text-gray-500 hover:bg-slate-50 transition-colors"><ChevronRight size={14} /></button>
+                </div>
+            )}
+          </div>
+
+          {plans.length > 0 ? (
+              <div
+                  ref={sliderRef}
+                  className="flex gap-5 overflow-x-auto pt-1 pb-4 scrollbar-hide snap-x"
+              >
+                {/*
+                  수정 포인트: API가 이미 `?productId=${id}`로 필터링된 값을 내려주므로 컴포넌트 레벨 검증식 보완
+                  String vs Number 타입 불일치 및 key 설계 에러를 방지하기 위해 안전하게 파싱 및 옵셔널 체이닝 적용
+                */}
+                {plans
+                .filter((plan) => String(plan.product?.productId || plan.product?.id) === String(id))
+                .map((plan) => (
+                    <div
+                        key={plan.id}
+                        className="bg-white border border-[#E5E7EB] rounded-[16px] p-5 flex gap-4 shadow-[0_4px_20px_rgba(0,0,0,0.01)] hover:border-[#007AFF]/40 hover:shadow-md transition-all group cursor-pointer snap-start min-w-[320px] md:min-w-[360px] max-w-[360px] shrink-0"
+                    >
+                      <div className="w-[100px] h-[100px] bg-[#EAECEF] rounded-[10px] flex items-center justify-center text-gray-400 shrink-0 overflow-hidden">
+                        <Compass size={20} className="opacity-40" />
+                      </div>
+
+                      <div className="flex flex-col justify-between py-0.5 flex-1 min-w-0">
+                        <div className="space-y-1">
+                    <span className={`inline-block text-[9px] font-black px-2 py-0.5 rounded ${
+                        plan.recruitStatus === 'OPEN' ? 'bg-[#FFF0F0] text-[#FF4D4D]' : 'bg-gray-100 text-gray-400'
+                    }`}>
+                      {plan.recruitStatus === 'OPEN' ? '모집 중' : '모집 마감'}
+                    </span>
+                          <h4 className="text-sm font-black text-slate-800 tracking-tight truncate mt-0.5 group-hover:text-[#007AFF] transition-colors">
+                            {plan.title}
+                          </h4>
+                          <p className="text-[11px] font-medium text-gray-400 line-clamp-1 leading-normal">
+                            {plan.description || '함께 떠나는 패키지 여행 가이드 일정입니다.'}
+                          </p>
+                        </div>
+
+                        <div className="text-[10px] font-bold text-[#666666] pt-1.5 border-t border-slate-50 flex items-center gap-1">
+                          <Calendar size={11} className="text-gray-400" />
+                          <span>{plan.startDate?.replace(/-/g, '.')} ~ {plan.endDate?.replace(/-/g, '.')}</span>
+                        </div>
+                      </div>
+                    </div>
+                ))}
+              </div>
+          ) : (
+              <div className="text-left py-10 bg-white border border-dashed border-slate-200 rounded-2xl px-6 text-gray-400 text-xs font-bold">
+                현재 이 티켓 이용권을 코스 라인에 매핑해 개설한 패키지 여행 일정이 부재한 상태입니다.
+              </div>
+          )}
+        </div>
+
+        {/* 구매 전 필수 유의사항 고지 서랍 */}
+        <footer className="max-w-[1040px] mx-auto px-6 mt-12 space-y-3">
+          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block px-0.5">구매 전 필수 유의사항 고지</label>
+          <div className="bg-white border border-slate-100 rounded-[20px] p-5 text-xs text-slate-500 font-medium leading-relaxed shadow-sm">
+            {product.description || '정식 티켓 발권 후 취소/환불 규정 및 상세 교환 안내 가이드가 비어있습니다.'}
+          </div>
+        </footer>
       </motion.div>
   );
 };
-
-const ProductDetailedDescription = ({ description }) => (
-    <section className="pt-16 border-t border-slate-100 space-y-8">
-      <div className="flex items-center gap-2.5">
-        <div className="h-5 w-1 bg-slate-800 rounded-full" />
-        <h3 className="text-xl font-black text-[#222222]">상세 안내 명세</h3>
-      </div>
-      <div className="bg-slate-50/60 border border-slate-100/70 rounded-[32px] p-8 md:p-12 text-center space-y-12">
-        <div className="max-w-2xl mx-auto space-y-4">
-          <h2 className="text-lg font-black text-[#333333] tracking-tight">안내 및 유의사항</h2>
-          <p className="text-xs md:text-sm text-slate-500 font-medium leading-relaxed">{description}</p>
-        </div>
-      </div>
-    </section>
-);

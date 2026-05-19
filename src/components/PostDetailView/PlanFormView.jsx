@@ -14,6 +14,8 @@ import {
   Loader2,
   Ticket,
   Users,
+  Camera,
+  XCircle,
 } from 'lucide-react';
 import { message } from 'antd';
 import {
@@ -109,6 +111,7 @@ const SortableItineraryItem = ({
                   value={item.startTime}
                   onChange={(e) => handleUpdateItem(dayIdx, itemIdx, 'startTime', e.target.value)}
                   className="bg-transparent text-xs font-bold w-full focus:outline-none"
+                  // 초(:ss) 제거 보정
               />
               <span className="text-gray-300 text-xs">~</span>
               <input
@@ -183,10 +186,14 @@ const SortableItineraryItem = ({
   );
 };
 
+
 // --- 메인 폼 매니저 컴포넌트 ---
 export const PlanFormView = ({ initialData, onSave, mode = 'create' }) => {
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+
+  // 📸 단일 이미지 상태 관리 (파일 객체 저장)
+  const [imageFile, setImageFile] = useState(null);
 
   // 마스터 정보 상태 관리
   const [tripInfo, setTripInfo] = useState({
@@ -196,7 +203,7 @@ export const PlanFormView = ({ initialData, onSave, mode = 'create' }) => {
     endDate: initialData?.endDate || new Date(Date.now() + 345600000).toISOString().split('T')[0],
   });
 
-  // 💡 [필드 수정 및 파싱 핵심] 백엔드 단층 데이터(planUnits)를 dnd-kit 규격 및 day 그룹으로 복원
+  // 백엔드 단층 데이터(planUnits)를 dnd-kit 규격 및 day 그룹으로 복원
   const [itinerary, setItinerary] = useState(() => {
     if (initialData?.planUnits && initialData.planUnits.length > 0) {
       const groupByDay = {};
@@ -207,13 +214,12 @@ export const PlanFormView = ({ initialData, onSave, mode = 'create' }) => {
           groupByDay[d] = [];
         }
 
-        // 백엔드 시간 값(hh:mm:ss)에서 초(:ss) 단위를 잘라내기 처리 (input[type=time] 바인딩 규격 맞춤)
         const formattedStartTime = unit.startTime?.length > 5 ? unit.startTime.substring(0, 5) : (unit.startTime || '10:00');
         const formattedEndTime = unit.endTime?.length > 5 ? unit.endTime.substring(0, 5) : (unit.endTime || '12:00');
 
         groupByDay[d].push({
-          id: unit.id || Math.random().toString(36).substr(2, 9), // dnd-kit 식별용 유니크 스트링 ID 부여
-          planUnitId: unit.id, // 원래의 백엔드 아이디 백업
+          id: unit.id || Math.random().toString(36).substr(2, 9),
+          planUnitId: unit.id,
           title: unit.title || '',
           description: unit.description || '',
           startTime: formattedStartTime,
@@ -221,7 +227,6 @@ export const PlanFormView = ({ initialData, onSave, mode = 'create' }) => {
           maxCount: unit.maxCount || 5,
           price: unit.product?.price || 0,
           productScheduleId: unit.product?.scheduleId || null,
-          // UI 컴포넌트 렌더링용 내부 매핑 스토어 상품 가상 객체 주입
           _product: unit.product ? {
             productId: unit.product.productId,
             scheduleId: unit.product.scheduleId,
@@ -231,27 +236,35 @@ export const PlanFormView = ({ initialData, onSave, mode = 'create' }) => {
         });
       });
 
-      // 일차(day) 번호 순서대로 오름차순 정렬 및 구조 변환
       return Object.keys(groupByDay)
       .sort((a, b) => Number(a) - Number(b))
       .map((dayNum) => ({
         day: Number(dayNum),
-        // 각 일차 안의 아이템들을 orderIndex 기준으로 다시 내부 순서 보장 정렬
         items: groupByDay[dayNum].sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0)),
       }));
     }
 
-    // 기본 생성 모드일 때 디폴트 구조
     return [{ day: 1, items: [] }];
   });
 
-  const [activeSearchKey, setActiveSearchKey] = useState(null); // 'dayIdx-itemIdx' 또는 null
+  const [activeSearchKey, setActiveSearchKey] = useState(null);
   const [searchDate, setSearchDate] = useState(new Date().toISOString().split('T')[0]);
   const [products, setProducts] = useState([]);
 
   const sensors = useSensors(
       useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
+
+  const handleImageChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+  };
 
   const handleSearchProducts = async () => {
     if (!searchDate) {
@@ -378,13 +391,11 @@ export const PlanFormView = ({ initialData, onSave, mode = 'create' }) => {
     itinerary.forEach((dayData) => {
       dayData.items.forEach((item) => {
         flattenedUnits.push({
-          // 💡 수정 모드일 때 원래 매핑되어 있던 유닛의 고유 ID도 포함하여 전송
           id: item.planUnitId || null,
           day: dayData.day,
           orderIndex: orderCounter++,
           title: item.title,
           description: item.description,
-          // 백엔드 저장 시 시분초 형식 포맷 맞춤 전송
           startTime: item.startTime?.length === 5 ? `${item.startTime}:00` : item.startTime,
           endTime: item.endTime?.length === 5 ? `${item.endTime}:00` : item.endTime,
           price: item.price,
@@ -401,12 +412,37 @@ export const PlanFormView = ({ initialData, onSave, mode = 'create' }) => {
 
     setLoading(true);
     try {
-      const payload = {
-        ...tripInfo,
-        planType: 'CUSTOM',
-        planUnits: flattenedUnits
-      };
-      await onSave(payload);
+      const formData = new FormData();
+
+      formData.append('title', tripInfo.title.trim());
+      formData.append('description', tripInfo.description.trim());
+      formData.append('startDate', tripInfo.startDate);
+      formData.append('endDate', tripInfo.endDate);
+      formData.append('planType', 'CUSTOM');
+
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
+
+      flattenedUnits.forEach((item, index) => {
+        if (item.id) {
+          formData.append(`planUnits[${index}].id`, String(item.id));
+        }
+        formData.append(`planUnits[${index}].day`, String(item.day));
+        formData.append(`planUnits[${index}].orderIndex`, String(item.orderIndex));
+        formData.append(`planUnits[${index}].title`, item.title.trim());
+        formData.append(`planUnits[${index}].description`, item.description.trim());
+        formData.append(`planUnits[${index}].startTime`, item.startTime);
+        formData.append(`planUnits[${index}].endTime`, item.endTime);
+        formData.append(`planUnits[${index}].price`, String(item.price));
+        formData.append(`planUnits[${index}].maxCount`, String(item.maxCount));
+
+        if (item.productScheduleId) {
+          formData.append(`planUnits[${index}].productScheduleId`, String(item.productScheduleId));
+        }
+      });
+
+      await onSave(formData);
     } catch (e) {
       console.error(e);
     } finally {
@@ -454,6 +490,37 @@ export const PlanFormView = ({ initialData, onSave, mode = 'create' }) => {
                       className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20"
                   />
                 </div>
+
+                {/* 📸 단일 이미지 업로드 UI 영역 */}
+                <div className="space-y-2">
+                  <p className="text-[11px] font-bold text-[#666666] ml-1">대표 이미지</p>
+                  <div className="flex flex-wrap gap-4">
+                    {imageFile ? (
+                        <div className="relative w-24 h-24 rounded-2xl overflow-hidden group">
+                          <img src={URL.createObjectURL(imageFile)} className="w-full h-full object-cover" alt="Preview" />
+                          <button
+                              type="button"
+                              onClick={handleRemoveImage}
+                              className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <XCircle size={14} />
+                          </button>
+                        </div>
+                    ) : (
+                        <label className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center gap-2 text-[#999999] hover:bg-gray-50 hover:border-[#007AFF] hover:text-[#007AFF] transition-all cursor-pointer">
+                          <Camera size={24} />
+                          <span className="text-[10px] font-black uppercase">Add Photo</span>
+                          <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageChange}
+                              className="hidden"
+                          />
+                        </label>
+                    )}
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <p className="text-[11px] font-bold text-[#666666] ml-1">전체 루트 요약 서술</p>
                   <textarea

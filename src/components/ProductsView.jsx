@@ -7,6 +7,7 @@ const LOCATION_DATA = {
   KR: { name: '한국', cities: ['서울', '부산', '제주', '인천', '대구'] },
   JP: { name: '일본', cities: ['도쿄', '오사카', '후쿠오카', '교토', '삿포로'] }
 };
+
 const ProductCard = ({ product, onClick }) => {
   return (
       <div
@@ -348,7 +349,7 @@ export const ProductsView = () => {
               지정한 조건 범주에 들어맞는 등록 상품 목록이 존재하지 않습니다.
             </div>
         ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 relative z-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 relative z-10">
               {filteredProducts.map((product) => (
                   <ProductCard
                       key={product.id}

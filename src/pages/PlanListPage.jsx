@@ -224,10 +224,11 @@ export default function PlanListPage() {
                         className="flex flex-row gap-5 md:gap-6 group cursor-pointer py-5 border-b border-gray-100 last:border-0 items-center bg-white"
                     >
                       {/* 미니 썸네일 박스 (시안의 컴팩트한 연회색 정비율 박스 구현) */}
-                      <div className="w-[110px] h-[110px] md:w-[130px] md:h-[130px] rounded-2xl overflow-hidden bg-slate-100 shrink-0 border border-gray-50 flex items-center justify-center">
-                        {schedule.image ? (
+                      <div className="w-[110px] h-[110px] md:w-[130px] md:h-[130px] rounded-2xl overflow-hidden
+                      shrink-0 border border-gray-50 flex items-center justify-center">
+                        {schedule.imageUrl ? (
                             <img
-                                src={schedule.image}
+                                src={schedule.imageUrl}
                                 className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
                                 alt="일정 이미지"
                             />
