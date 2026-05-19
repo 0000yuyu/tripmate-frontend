@@ -17,6 +17,7 @@ export const ItemDetailView = ({ item, onBack, onViewRecord, onViewProduct, onOr
       await planService.applyToUnitPlan(item.planId, item.id);
       setIsParticipating(true);
       alert('참여 신청이 완료되었습니다! 방장의 승인을 기다려주세요.');
+      location.reload();
     } catch (error) {
       console.error(error);
       alert('참여 신청에 실패했습니다.');
