@@ -96,8 +96,10 @@ export const ItineraryView = ({ plan, onUnitClick }) => {
             <p className="text-xs text-gray-500 font-semibold">총 {currentDayData.length}개 코스 진행</p>
           </div>
 
-          <div className="w-full aspect-[2.3/1] bg-slate-50 border border-gray-100 rounded-[18px] relative overflow-hidden">
-            <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=800" className="w-full h-full object-cover grayscale opacity-30 select-none pointer-events-none" alt="" />
+          <div className="aspect-[3.3/1] w-[50%] bg-slate-50 border border-gray-100 rounded-[18px] relative overflow-hidden">
+            <img
+                src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=200"
+                className="w-full h-full object-cover grayscale opacity-30 select-none pointer-events-none" alt="" />
             <div className="absolute top-3 left-3 bg-white border border-gray-200/80 rounded-lg p-0.5 shadow-sm flex gap-0.5 scale-90 origin-top-left">
               <button type="button" className="px-3 py-1 bg-gray-900 text-white font-bold text-[10px] rounded-md">지도</button>
               <button type="button" className="px-3 py-1 text-gray-400 font-bold text-[10px]">위성</button>

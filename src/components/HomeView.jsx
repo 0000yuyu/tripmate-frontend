@@ -191,7 +191,6 @@ const HomeLandingPage = ({ onNavigate }) => {
             )}
           </section>
 
-          {/* 3. 여행 후기 기록 미리보기 섹션 (가이드 일정 리스트 카드 스타일 연동) */}
           <section className="space-y-6">
             <div className="flex items-center justify-between border-b border-gray-100 pb-4">
               <div className="space-y-1">
@@ -210,14 +209,23 @@ const HomeLandingPage = ({ onNavigate }) => {
             ) : plans.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {plans.slice(0, 4).map((plan) => (
-                      <div
+                      <Link to={`/plans/${plan.PlanId}`}
                           key={plan.id}
                           className="bg-white border border-[#E5E7EB] rounded-[16px] p-6 flex gap-5 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:border-[#007AFF]/40 hover:shadow-md transition-all group cursor-pointer"
                       >
-                        {/* 좌측 이미지 회색 스퀘어 플레이스홀더 영역 */}
-                        <div className="w-[115px] h-[115px] bg-[#EAECEF] rounded-[12px] flex items-center justify-center text-gray-400 shrink-0 overflow-hidden">
-                          <Compass size={24} className="opacity-40" />
+                        <div className="flex items-center justify-center w-[115px] h-[115px]">
+                          {
+                            plan.imageUrl ? <img className="h-full w-full object-cover" src={plan.imageUrl}/> :
+                                <div className="w-full h-full bg-[#EAECEF] flex justify-center items-center rounded-[12px]  text-gray-400 shrink-0 overflow-hidden">
+                                <Compass size={24} className="opacity-40" />
+                            </div>
+
+                          }
                         </div>
+
+
+                        {/* 좌측 이미지 회색 스퀘어 플레이스홀더 영역 */}
+
 
                         {/* 우측 인포 명세 서술 영역 */}
                         <div className="flex flex-col justify-between py-0.5 flex-1 min-w-0">
@@ -244,7 +252,7 @@ const HomeLandingPage = ({ onNavigate }) => {
                             <span>{plan.startDate} ~ {plan.endDate}</span>
                           </div>
                         </div>
-                      </div>
+                      </Link>
                   ))}
                 </div>
             ) : (

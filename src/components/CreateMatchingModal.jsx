@@ -38,7 +38,6 @@ export const CreateMatchingModal = ({ isOpen, onClose, onSuccess }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Ensure ISO format for dates or format as required by API
       const payload = {
         ...formData,
         lat: parseFloat(formData.lat),

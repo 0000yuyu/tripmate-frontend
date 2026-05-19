@@ -18,13 +18,24 @@ export const PostDetailSidebar = ({
 
         {/* 썸네일 요약 헤더 영역 */}
         <div className="space-y-3 border-b border-slate-100 pb-5">
-          <div className="w-full h-[140px] bg-[#EAECEF] rounded-[8px] flex items-center justify-center text-xs font-bold text-gray-400">
-            썸네일 공간
+          {/* 💡 overflow-hidden을 주고 내부 이미지를 object-cover로 꽉 채움 */}
+          <div className="w-full h-[140px] bg-[#EAECEF] rounded-[8px] overflow-hidden flex items-center justify-center border border-slate-100">
+            {post.imageUrl ? (
+                <img
+                    src={post.imageUrl}
+                    alt={post.title}
+                    className="w-full h-full object-cover"
+                />
+            ) : (
+                // 이미지가 깨지거나 유실되었을 때의 방어막 대체 텍스트/디자인
+                <span className="text-[11px] font-bold text-gray-400">No Custom Image</span>
+            )}
           </div>
+
           <div className="space-y-1">
-          <span className="inline-block bg-[#FFF0F0] text-[#FF4D4D] text-[10px] font-black px-2 py-0.5 rounded">
-            {post.recruitStatus === 'OPEN' ? '모집 중' : '모집 마감'}
-          </span>
+            <span className="inline-block bg-[#FFF0F0] text-[#FF4D4D] text-[10px] font-black px-2 py-0.5 rounded">
+              {post.recruitStatus === 'OPEN' ? '모집 중' : '모집 마감'}
+            </span>
             <h3 className="text-base font-black text-[#333333] tracking-tight truncate mt-1">
               {post.title}
             </h3>
@@ -38,9 +49,8 @@ export const PostDetailSidebar = ({
           </div>
         </div>
 
-        {/* [수정 반영] 핵심 내비게이션 라인만 매핑 (참여, 기록은 완전 제외) */}
+        {/* 핵심 내비게이션 라인 메뉴 */}
         <div className="flex flex-col gap-1.5">
-
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1.5 mb-1">일반 메인 메뉴</p>
 
           <button
@@ -82,7 +92,6 @@ export const PostDetailSidebar = ({
             <UserCheck size={16} />
             <span>신청 메이트 명단 관리</span>
           </button>
-
         </div>
       </div>
   );

@@ -59,7 +59,6 @@ export const ItemDetailView = ({
           </button>
         </div>
 
-        {/* [스케치 반영]: 중단 메인 탭 내비게이션 바 */}
         <div className="flex gap-8 border-b border-gray-200 text-sm font-bold">
           {[
             { id: 'participation', label: '참여' },
