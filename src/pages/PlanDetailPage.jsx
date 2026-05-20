@@ -23,7 +23,7 @@ export default function PlanDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [post, setPost] = useState(null);
-  const [loading, setLoading] = useState(true); // 로딩 상태 추가
+  const [loading, setLoading] = useState(true); // 👍 처음부터 로딩 상태를 true로 시작합니다.
 
   // 'all' | 'edit' | 'manage' | 'product_manage' | 'unit_view'
   const [selectedMenuItem, setSelectedMenuItem] = useState('all');
@@ -34,10 +34,11 @@ export default function PlanDetailPage() {
 
   const { user } = useProfile();
 
-  // 🔄 데이터를 새로고침하는 함수 (useCallback으로 감싸 효율화)
+  // 🔄 데이터를 새로고침하는 함수
   const refreshData = useCallback(async () => {
     if (!id) return;
     try {
+      setLoading(true); // 🚀 데이터 로드 시작 시 로딩 상태를 켭니다.
       const response = await axiosInstance.get(`/plans/${id}`);
       const freshPost = response.data?.data || response.data;
       setPost(freshPost);
@@ -62,7 +63,8 @@ export default function PlanDetailPage() {
     refreshData();
   }, [id]); // 첫 렌더링 및 ID 변경시에만 작동
 
-  if (loading) {
+  // 💡 로딩 중이거나 데이터가 아직 들어오지 않았을 때 스피너를 보여주어 에러를 방지합니다.
+  if (loading || !post) {
     return (
         <div className="flex items-center justify-center min-h-[500px]">
           <Loader2 size={36} className="animate-spin text-[#007AFF]" />
@@ -97,7 +99,7 @@ export default function PlanDetailPage() {
           break;
         }
       }
-      console.log("user", user.id, "host", hostUserId)
+      console.log("user", user?.id, "host", hostUserId)
 
       if (!hostUserId || hostUserId !== user?.id) {
         message.error("🔒 관리자 페이지는 호스트만 접근할 수 있습니다.");
@@ -112,16 +114,13 @@ export default function PlanDetailPage() {
     try {
       await axiosInstance.put(`/plans/${id}`, payload);
       message.success("✈️ 투어 패키지 변경사항이 반영되었습니다.");
-
-      // 만약 수정 후 목록으로 가야 한다면 그대로 두고, 상세 페이지에 남는다면 데이터 리프레시를 합니다.
-      // 여기서는 기존 기획인 목록으로 이동 단계를 유지하되 최신화를 보장합니다.
       navigate('/plans');
     } catch (e) {
       message.error("수정 요청 중 통신 오류가 발생했습니다.");
     }
   };
 
-  // 2. 코스 참여 신청 완료 후 🔄 리프레시 적용
+  // 2. 코스 참여 신청 완료 후
   const handleJoinUnit = async () => {
     try {
       await planService.applyToUnitPlan(id, selectedItem.id);
@@ -148,18 +147,16 @@ export default function PlanDetailPage() {
       const orderId = response.data?.data?.orderId;
       const amount = response.data?.data?.orderItems[0]?.price;
 
-      // 주문 완료 후에는 결제 페이지로 이동하므로 리프레시 대신 페이지 이동을 수행합니다.
       navigate(`/payment?backOrderId=${orderId}&amount=${amount}`);
     } catch (e) {
       message.error("주문 생성 중 통신 에러가 발생했습니다.");
     }
   };
 
-  // 4. 단위 일정 확정(혹은 처리) 완료 후 🔄 리프레시 적용
+  // 4. 단위 일정 확정 완료 후
   const handleConfirmUnit = async () => {
     if (!selectedItem) return;
     try {
-      // 기존에 없던 planId, unitPlanId 변수를 상위 state와 props 기준으로 안전하게 맵핑했습니다.
       const response = await axiosInstance.patch(`/plans/${id}/unit-plans/${selectedItem.id}`);
       console.log(response);
       window.location.reload();
