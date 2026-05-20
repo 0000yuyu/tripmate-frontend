@@ -148,7 +148,7 @@ export default function CompanyManagementPage() {
           id: schedule.scheduleId,
           productId: product.id,
           productName: product.productName,
-          image: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?auto=format&fit=crop&q=80&w=200",
+          image: product.imageUrl,
           date: schedule.date,
           price: product.price,
           status: schedule.stock === 0 ? 'SOLD_OUT' : (schedule.status === 'ACTIVE' ? 'ACTIVE' : 'DISABLED'),
