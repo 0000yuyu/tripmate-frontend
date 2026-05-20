@@ -150,7 +150,7 @@ const HomeLandingPage = ({ onNavigate }) => {
                       >
                         {/* 좌측 스퀘어 썸네일 컴포넌트 구역 */}
                         <div className="w-[115px] h-[115px] bg-[#EAECEF] rounded-[12px] flex items-center justify-center text-gray-400 shrink-0 overflow-hidden">
-                          {prod.image ? (
+                          {prod.imageUrl ? (
                               <img src={prod.imageUrl} alt={prod.title} className="w-full h-full object-cover" />
                           ) : (
                               <ShoppingBag size={24} className="opacity-40" />

@@ -99,7 +99,10 @@ export const MatchingView = () => {
 
   // 커스텀 수평 트랙 인디케이터용 타겟 노드 레프 및 수치 상태
   const scrollContainerRef = useRef(null);
+  const isDraggingRef = useRef(false);
+  const prevMeetupsLengthRef = useRef(0);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const handleScroll = () => {
     if (!scrollContainerRef.current) return;
@@ -148,6 +151,19 @@ export const MatchingView = () => {
   useEffect(() => {
     setTimeout(handleScroll, 100);
   }, [filteredMeetups]);
+
+  useEffect(() => {
+    if (filteredMeetups.length > prevMeetupsLengthRef.current) {
+      setActiveIndex(filteredMeetups.length - 1);
+    }
+
+    prevMeetupsLengthRef.current = filteredMeetups.length;
+  }, [filteredMeetups.length]);
+  useEffect(() => {
+    if (activeIndex >= filteredMeetups.length) {
+      setActiveIndex(Math.max(0, filteredMeetups.length - 1));
+    }
+  }, [filteredMeetups.length, activeIndex]);
 
   return (
       <div className="h-full px-2 bg-[#F8FAFC] rounded-2xl md:rounded-[32px] shadow-[0_8px_32px_rgba(0,0,0,0.04)] overflow-hidden min-h-[650px] lg:h-[780px] flex flex-col border border-gray-100">
@@ -258,68 +274,77 @@ export const MatchingView = () => {
                 <div className="w-full flex flex-col items-center min-h-0">
 
                   {/* 🚀 정방향 수평 타로 스프레드 뷰 구조 (.hide-scroll 적용) */}
-                  <div
-                      ref={scrollContainerRef}
-                      onScroll={handleScroll}
-                      className={`w-full flex items-center overflow-x-auto pt-10 pb-16 hide-scroll snap-x snap-mandatory ${
-                          filteredMeetups.length === 1 ? 'justify-center px-4' : 'justify-start md:justify-center px-16 md:px-24'
-                      }`}
-                  >
-                    <AnimatePresence>
-                      {filteredMeetups.map((meetup, idx) => {
-                        const count = filteredMeetups.length;
+                  <div className="w-full flex flex-col items-center py-8 overflow-visible">
+                    <div className="relative w-[310px] sm:w-[340px] h-[440px] sm:h-[460px]">
 
-                        // 🃏 미세한 리얼 타로 덱 느낌을 주기 위한 지그재그 틸트 분기값 세팅
-                        const softRotate = idx % 2 === 0 ? 1.5 : -1.5;
 
-                        return (
+                      {/* 이전 카드 */}
+                      {activeIndex > 0 && (
+                          <div className="absolute left-[-22px] top-5 w-full h-full scale-[0.94] opacity-40 rounded-[24px] bg-white border border-slate-100 shadow-md z-0" />
+                      )}
+
+                      {/* 다음 카드 */}
+                      {activeIndex < filteredMeetups.length - 1 && (
+                          <div className="absolute right-[-22px] top-5 w-full h-full scale-[0.94] opacity-40 rounded-[24px] bg-white border border-slate-100 shadow-md z-0" />
+                      )}
+
+                      {/* 현재 카드 */}
+                      <AnimatePresence mode="wait">
+                        {filteredMeetups[activeIndex] && (
                             <motion.div
-                                key={meetup.matchingId}
-                                initial={{ opacity: 0, x: 60, scale: 0.9 }}
-                                animate={{
-                                  opacity: 1,
-                                  x: 0,
-                                  scale: 1,
-                                  y: 0,
-                                  rotate: count > 1 ? softRotate : 0
+                                key={filteredMeetups[activeIndex].matchingId}
+                                initial={{ opacity: 0, x: 40, scale: 0.96 }}
+                                animate={{ opacity: 1, x: 0, scale: 1 }}
+                                exit={{ opacity: 0, x: -40, scale: 0.96 }}
+                                transition={{ duration: 0.2 }}
+
+                                drag="x"
+                                dragConstraints={{ left: 0, right: 0 }}
+                                dragElastic={0.18}
+
+                                onDragStart={() => {
+                                  isDraggingRef.current = false;
                                 }}
-                                exit={{ opacity: 0, scale: 0.8, x: -60 }}
-                                whileHover={{
-                                  y: -35,
-                                  scale: 1.03,
-                                  zIndex: 100,
-                                  rotate: 0, // 호버 시에는 똑바르게 펴지도록 연출
-                                  transition: { duration: 0.18, ease: "easeInOut" }
+                                onDrag={(event, info) => {
+                                  if (isDraggingRef.current) return;
+
+                                  if (info.offset.x < -60 && activeIndex < filteredMeetups.length - 1) {
+                                    isDraggingRef.current = true;
+                                    setActiveIndex(prev => prev + 1);
+                                  }
+
+                                  if (info.offset.x > 60 && activeIndex > 0) {
+                                    isDraggingRef.current = true;
+                                    setActiveIndex(prev => prev - 1);
+                                  }
                                 }}
-                                className={`w-[270px] sm:w-[300px] h-[400px] sm:h-[440px] shrink-0 bg-white border border-slate-100/90 rounded-[24px] p-5 flex flex-col justify-between shadow-[0_10px_25px_rgba(0,0,0,0.03)] hover:shadow-[0_25px_50px_rgba(0,0,0,0.13)] transition-shadow snap-center cursor-pointer relative group ${
-                                    count > 1 ? '-mx-8 md:-mx-12' : 'mx-0'
-                                }`}
-                                style={{ zIndex: idx + 1 }}
+                                className="absolute inset-0 z-10 bg-white border border-slate-100/90 rounded-[24px] p-5 flex flex-col justify-between shadow-[0_18px_40px_rgba(0,0,0,0.08)]"
                             >
                               <div className="space-y-4 text-left">
                                 <div className="flex items-center justify-between">
-                                  <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-black tracking-tight ${
-                                      currentStreamMode === 'host' ? 'bg-amber-100 text-amber-800' : 'bg-blue-50 text-[#007AFF]'
-                                  }`}>
-                                    {meetup.status}
-                                  </span>
+                                <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black tracking-tight bg-blue-50 text-[#007AFF]">
+                                  {filteredMeetups[activeIndex].status}
+                                </span>
+
                                   <span className="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">
-                                    No.{idx + 1}
-                                  </span>
+                                  No.{activeIndex + 1}
+                                </span>
                                 </div>
 
                                 <div className="space-y-2">
-                                  <h3 className="text-base font-black text-[#222222] leading-snug tracking-tight line-clamp-2 group-hover:text-[#007AFF] transition-colors">
-                                    {meetup.title}
+                                  <h3 className="text-base font-black text-[#222222] leading-snug tracking-tight line-clamp-2">
+                                    {filteredMeetups[activeIndex].title}
                                   </h3>
+
                                   <div className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-slate-50 px-2 py-1 rounded-lg">
-                                    <MapPin size={11} className="text-[#007AFF]" /> {meetup.country} · {meetup.city}
+                                    <MapPin size={11} className="text-[#007AFF]" />
+                                    {filteredMeetups[activeIndex].country} · {filteredMeetups[activeIndex].city}
                                   </div>
                                 </div>
 
                                 <div className="bg-slate-50/60 rounded-xl p-3 border border-slate-100/50">
                                   <p className="text-xs text-gray-500 font-medium leading-relaxed h-[85px] line-clamp-4 overflow-hidden">
-                                    {meetup.description}
+                                    {filteredMeetups[activeIndex].description}
                                   </p>
                                 </div>
                               </div>
@@ -327,26 +352,27 @@ export const MatchingView = () => {
                               <div className="space-y-3 pt-3 border-t border-slate-100">
                                 <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-400">
                                   <Calendar size={12} />
-                                  <span className="truncate">{meetup.scheduledAt?.replace('T', ' ').slice(0, 16)}</span>
+                                  <span className="truncate">
+                                  {filteredMeetups[activeIndex].scheduledAt
+                                  ?.replace('T', ' ')
+                                  .slice(0, 16)}
+                                </span>
                                 </div>
+
                                 <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleAcceptMatching(meetup);
+                                      handleAcceptMatching(filteredMeetups[activeIndex]);
                                     }}
-                                    className={`w-full py-3 text-white font-black text-xs rounded-xl shadow-md transition-all ${
-                                        currentStreamMode === 'host'
-                                            ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-100'
-                                            : 'bg-[#007AFF] hover:bg-blue-600 shadow-blue-100'
-                                    } active:scale-[0.98]`}
+                                    className="w-full py-3 text-white font-black text-xs rounded-xl shadow-md transition-all bg-[#007AFF] hover:bg-blue-600 shadow-blue-100 active:scale-[0.98]"
                                 >
-                                  {currentStreamMode === 'host' ? '신청 수락하기' : '동행 참여하기'}
+                                  동행 참여하기
                                 </button>
                               </div>
                             </motion.div>
-                        );
-                      })}
-                    </AnimatePresence>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   </div>
 
                   {/* 하단 트랙 프로그레스 핸들 바 */}
@@ -355,8 +381,8 @@ export const MatchingView = () => {
                         <div
                             className="h-full bg-[#007AFF] rounded-full transition-all duration-75"
                             style={{
-                              width: `${Math.max(20, 100 / filteredMeetups.length)}%`,
-                              transform: `translateX(${(scrollProgress * (180 - (180 * (Math.max(20, 100 / filteredMeetups.length) / 100)))) / 100}px)`
+                              width: `${100 / filteredMeetups.length}%`,
+                              transform: `translateX(${activeIndex * 100}%)`
                             }}
                         />
                       </div>
