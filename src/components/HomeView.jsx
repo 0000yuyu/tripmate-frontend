@@ -143,14 +143,15 @@ const HomeLandingPage = ({ onNavigate }) => {
             {products.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {products.slice(0, 4).map((prod) => (
-                      <div
+                      <Link
+                          to={`/products/${prod.id}`}
                           key={prod.id}
                           className="bg-white border border-[#E5E7EB] rounded-[16px] p-6 flex gap-5 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:border-[#007AFF]/40 hover:shadow-md transition-all group cursor-pointer"
                       >
                         {/* 좌측 스퀘어 썸네일 컴포넌트 구역 */}
                         <div className="w-[115px] h-[115px] bg-[#EAECEF] rounded-[12px] flex items-center justify-center text-gray-400 shrink-0 overflow-hidden">
                           {prod.image ? (
-                              <img src={prod.image} alt={prod.title} className="w-full h-full object-cover" />
+                              <img src={prod.imageUrl} alt={prod.title} className="w-full h-full object-cover" />
                           ) : (
                               <ShoppingBag size={24} className="opacity-40" />
                           )}
@@ -181,7 +182,7 @@ const HomeLandingPage = ({ onNavigate }) => {
                             <span className="text-sm font-black text-slate-900">{prod.price.toLocaleString()}원</span>
                           </div>
                         </div>
-                      </div>
+                      </Link>
                   ))}
                 </div>
             ) : (

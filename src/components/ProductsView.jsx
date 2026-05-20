@@ -82,12 +82,12 @@ export const ProductsView = () => {
           id: p.id,
           title: p.productName || p.name || '도쿄 3박 4일 패키지',
           description: p.description,
-          price: p.price || (idx % 2 === 0 ? 45000 : 120000),
-          country: idx % 2 === 0 ? '일본' : '한국',
-          city: idx % 2 === 0 ? '도쿄' : '서울',
-          status: idx % 4 === 0 ? '비활성화' : '활성화',
+          price: p.price,
+          country: p.address.country,
+          city: p.address.city,
+          status: p.status !== "ACTIVE" ? '비활성화' : '활성화',
           dateRange: p.dateRange || '2026-05-02 ~ 2026-05-13',
-          image: p.image || null
+          image: p.imageUrl || null
         }));
 
         setProducts(mappedProducts);

@@ -21,11 +21,13 @@ import {
   MapPin,
   Mail,
   Phone,
-  FileText
+  FileText, XCircle, Camera
 } from 'lucide-react';
 import { message, Spin, Form, DatePicker, InputNumber, Input, Select } from 'antd';
 import axiosInstance from "../utils/axiosInstance";
 import CustomModal from "@components/CustomModal.jsx";
+import {getAccessToken} from "@utils/auth.js";
+import axios from "axios";
 
 const LOCATION_DATA = {
   KR: {
@@ -84,6 +86,8 @@ export default function CompanyManagementPage() {
   const [productSchedulesMap, setProductSchedulesMap] = useState({});
   const [companyInfo, setCompanyInfo] = useState(null);
 
+  const [imageFile, setImageFile] = useState(null);
+
   const fetchData = async () => {
     if (!companyId) return;
     setIsLoading(true);
@@ -135,7 +139,6 @@ export default function CompanyManagementPage() {
     fetchData();
   }, [companyId]);
 
-  // 1. [데이터 정제] 복합 배열 단층 평탄화 (카테고리 필드 제거)
   const flattenedTableData = useMemo(() => {
     const rows = [];
     rawProducts.forEach(product => {
@@ -157,7 +160,6 @@ export default function CompanyManagementPage() {
     return rows.sort((a, b) => a.date.localeCompare(b.date));
   }, [rawProducts, productSchedulesMap]);
 
-  // 2. 복합 필터식 조건 연산 (카테고리 조건 제거)
   const filteredRows = useMemo(() => {
     let result = [...flattenedTableData];
     if (searchQuery.trim() !== '') {
@@ -195,24 +197,37 @@ export default function CompanyManagementPage() {
         );
         if (response.data?.success) message.success('기한 내 스케줄 생성이 일괄 완료되었습니다.');
       } else {
-        const payload = {
-          companyId,
-          productName: values.productName,
-          description: values.description,
-          price: values.price,
-          status: "ACTIVE",
-          addressLine : values.address.addressLine,
-          country : values.address.country,
-          state : values.address.state,
-          city: values.address.city
-        };
+        const formData = new FormData();
 
-        const response = await axiosInstance.post('/products', payload,{ headers: { 'X-Company-Id': companyId } });
-        if (response.data?.success) message.success('신규 상품 등록에 성공했습니다.');
+        formData.append('companyId', companyId);
+        formData.append('productName', values.productName.trim());
+        formData.append('description', values.description.trim());
+        formData.append('price', String(values.price));
+        formData.append('status', 'ACTIVE');
+
+        formData.append('addressLine', values.address.addressLine.trim());
+        formData.append('country', values.address.country);
+        formData.append('state', values.address.state);
+        formData.append('city', values.address.city);
+
+        if (imageFile) {
+          formData.append('image', imageFile);
+        }
+
+        const token = getAccessToken();
+
+        await axios.post('/api/products', formData, {
+          headers: {
+            'X-Company-Id': companyId,
+            'Content-Type': 'multipart/form-data',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          }
+        });
       }
 
       setIsModalOpen(false);
       form.resetFields();
+      setImageFile(null);
       setSelectedState(null);
       fetchData();
     } catch (error) {
@@ -238,11 +253,18 @@ export default function CompanyManagementPage() {
     if(mode === 'PRODUCT') {
       setSelectedCountry('JP');
       setSelectedState(null);
+      setImageFile(null);
     }
   };
 
-  const handleExport = () => {
-    message.success('CSV 양식 다운로드가 완료되었습니다.');
+  const handleImageChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setImageFile(e.target.files[0]);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
   };
 
   return (
@@ -260,7 +282,6 @@ export default function CompanyManagementPage() {
           </button>
         </div>
 
-        {/* 대형 업체 상세 상단 정보 블록 */}
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-3xs space-y-4 relative overflow-hidden">
           {companyInfo?.status === 'ACTIVE' && (
               <span className="absolute top-4 right-4 bg-emerald-50 text-emerald-600 border border-emerald-200 text-[10px] font-black px-2 py-0.5 rounded-md uppercase">
@@ -307,7 +328,6 @@ export default function CompanyManagementPage() {
           </div>
         </div>
 
-        {/* 조건식 필터 대장 조율 레이어 (카테고리 제거 완료) */}
         <div className="space-y-4 bg-white p-5 rounded-2xl border border-gray-200 shadow-3xs">
           <div className="flex items-center justify-between text-xs font-bold text-gray-400 select-none pb-1">
             <div className="flex items-center gap-2">
@@ -346,7 +366,6 @@ export default function CompanyManagementPage() {
           </div>
         </div>
 
-        {/* 📊 인라인 전수 데이터 표 본체 (카테고리 컬럼 제거 완료) */}
         <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-2xs bg-white relative">
           <Spin spinning={isLoading}>
             <div className="overflow-x-auto">
@@ -447,7 +466,6 @@ export default function CompanyManagementPage() {
           </div>
         </div>
 
-        {/* ⚙️ 통합 CustomModal 렌더링 세션 */}
         <CustomModal
             isOpen={isModalOpen}
             onClose={() => {
@@ -455,13 +473,14 @@ export default function CompanyManagementPage() {
                 setIsModalOpen(false);
                 form.resetFields();
                 setSelectedState(null);
+                setImageFile(null);
               }
             }}
             title={modalMode === 'SCHEDULE' ? "스케줄 타임라인 일괄 생성" : "새 상품 등록"}
             maxWidth={modalMode === 'SCHEDULE' ? "max-w-[460px]" : "max-w-[520px]"}
             buttons={
               <div className="flex gap-2 w-full">
-                <button type="button" disabled={modalLoading} onClick={() => { setIsModalOpen(false); form.resetFields(); setSelectedState(null); }} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-[14px] text-xs font-bold hover:bg-gray-200 transition-colors disabled:opacity-50">취소하기</button>
+                <button type="button" disabled={modalLoading} onClick={() => { setIsModalOpen(false); form.resetFields(); setSelectedState(null); setImageFile(null); }} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-[14px] text-xs font-bold hover:bg-gray-200 transition-colors disabled:opacity-50">취소하기</button>
                 <button type="button" disabled={modalLoading} onClick={() => form.submit()} className="flex-[2] py-3 bg-blue-600 text-white rounded-[14px] text-xs font-bold hover:bg-blue-500 transition-colors shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50">
                   {modalLoading && <RefreshCw size={12} className="animate-spin" />}
                   {modalMode === 'SCHEDULE' ? '일괄 추가 실행' : '상품 등록'}
@@ -529,6 +548,35 @@ export default function CompanyManagementPage() {
                             className="w-full text-xs h-[38px]"
                         />
                       </Form.Item>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-bold text-[#666666] ml-1">이미지</p>
+                      <div className="flex flex-wrap gap-4">
+                        {imageFile ? (
+                            <div className="relative w-24 h-24 rounded-2xl overflow-hidden group">
+                              <img src={URL.createObjectURL(imageFile)} className="w-full h-full object-cover" alt="Preview" />
+                              <button
+                                  type="button"
+                                  onClick={handleRemoveImage}
+                                  className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <XCircle size={14} />
+                              </button>
+                            </div>
+                        ) : (
+                            <label className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center gap-2 text-[#999999] hover:bg-gray-50 hover:border-[#007AFF] hover:text-[#007AFF] transition-all cursor-pointer">
+                              <Camera size={24} />
+                              <span className="text-[10px] font-black uppercase">Add Photo</span>
+                              <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleImageChange}
+                                  className="hidden"
+                              />
+                            </label>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-1">

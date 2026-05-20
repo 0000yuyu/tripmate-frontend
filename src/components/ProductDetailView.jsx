@@ -152,11 +152,15 @@ export const ProductDetailView = () => {
         <div className="max-w-[1040px] mx-auto px-6 mt-12 grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
 
           {/* 왼쪽: 단독 대표 이미지 */}
-          <div className="md:col-span-5 w-full">
-            <div className="w-full aspect-square bg-[#EAECEF] rounded-[20px] flex flex-col items-center justify-center text-gray-400 border border-slate-100 shadow-sm relative overflow-hidden">
-              <Tag size={28} className="opacity-30" />
-              <span className="text-[10px] font-black opacity-30 mt-1">Official Store Item</span>
-            </div>
+          <div className="md:col-span-5 w-full rounded-[20px] overflow-hidden">
+            {
+              product.imageUrl ?
+                  <img src={product.imageUrl} alt={product.title} className="w-full h-full object-cover" /> :
+                  <div className="w-full aspect-square bg-[#EAECEF]  flex flex-col items-center justify-center text-gray-400 border border-slate-100 shadow-sm relative overflow-hidden">
+                    <Tag size={28} className="opacity-30" />
+                    <span className="text-[10px] font-black opacity-30 mt-1">Official Store Item</span>
+                  </div>
+            }
           </div>
 
           <div className="md:col-span-7 w-full space-y-6">
