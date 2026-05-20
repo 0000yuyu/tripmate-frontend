@@ -73,7 +73,7 @@ export default function PlanDetailPage() {
   };
 
   return (
-      <div className="max-w-[1200px] w-full h-screen flex flex-col mx-auto md:p-10 overflow-hidden">
+      <div className="w-full h-screen flex flex-col mx-auto md:p-10 overflow-hidden">
 
         {/* 1. 상단 브레드크럼 (PlanListPage와 동일한 규격) */}
         <div className="flex items-center gap-2 text-[11px] font-bold text-gray-400 mb-6 shrink-0">
