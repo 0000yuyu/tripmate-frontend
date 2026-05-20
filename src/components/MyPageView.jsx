@@ -459,7 +459,7 @@ const HeaderFilterDrawer = ({ columnKey, tableContext, title }) => {
 };
 
 // =========================================================================
-// 💡 [공통 모달 연동 완료] 3. 내 업체 목록 관리 패널
+// 💡 [공통 모달 연동 완료] 3. 내 업체 목록 관리 패널 (업체 설명 필드 추가)
 // =========================================================================
 const CompanyManagement = () => {
   const [form] = Form.useForm();
@@ -538,6 +538,12 @@ const CompanyManagement = () => {
                         {comp.status === 'APPROVED' ? '파트너 승인완료' : '검토 심사중'}
                       </span>
                     </div>
+                    {/* 업체 설명 간략 노출 */}
+                    {comp.description && (
+                        <p className="text-[11px] text-gray-500 font-medium line-clamp-2 bg-gray-50/50 p-2 rounded-lg border border-gray-100">
+                          {comp.description}
+                        </p>
+                    )}
                     <div className="text-[10px] font-mono font-bold text-gray-400 bg-slate-50 p-2 rounded-lg border border-slate-100/60">
                       사업자번호: {comp.businessNumber}
                     </div>
@@ -591,6 +597,15 @@ const CompanyManagement = () => {
                 rules={[{ required: true, message: '상호명(업체명)을 필수 입력하세요.' }]}
             >
               <Input placeholder="예: (주)트립가이드 재팬" className="py-2.5 rounded-[12px] text-xs font-medium bg-gray-50" />
+            </Form.Item>
+
+            {/* 💡 [신규 이식]: 업체에 대한 설명 필드 추가 명세 바인딩 */}
+            <Form.Item
+                name="description"
+                label={<span className="text-xs font-black text-slate-700">업체 서비스 상세 설명</span>}
+                rules={[{ required: true, message: '운영하시는 서비스 및 업체 소개를 필수 입력하세요.' }]}
+            >
+              <Input.TextArea placeholder="예: 시부야 지역의 엑티비티 및 공연 예약 티켓 서비스를 총괄 공급하는 전문 파트너사입니다." rows={3} className="rounded-[12px] text-xs font-medium bg-gray-50" />
             </Form.Item>
 
             <Form.Item

@@ -250,7 +250,7 @@ export default function CompanyManagementPage() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
-          className="min-h-screen bg-[#FAFAFA] max-w-[1140px] mx-auto space-y-8 pb-24 pt-10 px-6 font-sans antialiased text-[#37352F]"
+          className="mx-auto space-y-8 pb-24 pt-10 px-6 font-sans antialiased text-[#37352F]"
       >
         <div className="flex items-center justify-between select-none">
           <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
