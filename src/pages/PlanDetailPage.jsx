@@ -72,6 +72,46 @@ export default function PlanDetailPage() {
     }
   };
 
+  const handleUpdate = async (payload) => {
+    try {
+      await axiosInstance.put(`/plans/${id}`, payload);
+      message.success("✈️ 투어 패키지 변경사항이 반영되었습니다.");
+      navigate('/plans');
+    } catch (e) {
+      message.error("수정 요청 중 통신 오류가 발생했습니다.");
+    }
+  };
+
+  const handleJoinUnit = async () => {
+    try {
+      // 단위 일정 참여 API 신청부
+      await planService.applyToUnitPlan(id,selectedItem.id);
+      message.success("코스 참여 신청이 완료되었습니다.");
+    } catch (e) {
+      message.error("참여 신청 중 오류가 발생했습니다.");
+    }
+  };
+
+  const handleOrder = async () => {
+    if (!selectedItem?.product) return;
+    try {
+      const orderData = {
+        orderItems: [{
+          planUnitId: selectedItem.id,
+          productId: selectedItem.product.productId,
+          quantity: 1,
+          scheduleId: selectedItem.product.scheduleId
+        }]
+      };
+      const response = await axiosInstance.post("/orders", orderData);
+      const orderId = response.data?.data?.orderId;
+      const amount = response.data?.data?.orderItems[0]?.price;
+      navigate(`/payment?backOrderId=${orderId}&amount=${amount}`);
+    } catch (e) {
+      message.error("주문 생성 중 통신 에러가 발생했습니다.");
+    }
+  };
+
   return (
       <div className="w-full h-screen flex flex-col mx-auto md:p-10 overflow-hidden">
 
@@ -106,10 +146,10 @@ export default function PlanDetailPage() {
                         activeSubTab={unitSubTab}
                         setActiveSubTab={setUnitSubTab}
                         onBack={() => setSelectedMenuItem('all')}
-                        onJoinUnit={() => planService.applyToUnitPlan(id, selectedItem.id).then(refreshData)}
+                        onJoinUnit={handleJoinUnit}
                         onConfirmUnit={() => axiosInstance.patch(`/plans/${id}/unit-plans/${selectedItem.id}`).then(refreshData)}
                         onViewProduct={() => navigate(`/products/${selectedItem?.product?.productId}`)}
-                        onOrderProduct={() => {}}
+                        onOrderProduct={handleOrder}
                     />
                 ) : selectedMenuItem === 'edit' ? (
                     <PlanFormView mode="edit" initialData={post} onSave={(p) => axiosInstance.put(`/plans/${id}`, p).then(refreshData)} />
