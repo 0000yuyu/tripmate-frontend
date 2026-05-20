@@ -18,6 +18,7 @@ import HomeLandingPage from "@components/HomeView.jsx";
 import MemberShipPage from "@pages/MemberShipPage.jsx";
 import PlanCreatePage from "@pages/PlanPage.jsx";
 import {message, notification} from "antd";
+import CompanyManagementPage from "@pages/CompanyManagePage.jsx";
 
 function RequireAuth() {
 	return isLoggedIn() ? <Outlet/> : <Navigate to="/login" replace/>;
@@ -71,6 +72,7 @@ export default function App() {
             <Route path="profile/*" element={<MyPageView />} />
             <Route path="notifications" element={<NotificationsView />} />
             <Route path="payment" element={<PaymentPage/>}/>
+            <Route path="companies/:companyId" element={<CompanyManagementPage/>}/>
 					</Route>
 
 					<Route element={<AnonymousOnly/>}>

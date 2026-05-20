@@ -114,6 +114,7 @@ export default function PlanDetailPage() {
     try {
       await axiosInstance.put(`/plans/${id}`, payload);
       message.success("✈️ 투어 패키지 변경사항이 반영되었습니다.");
+      refreshData();
       navigate('/plans');
     } catch (e) {
       message.error("수정 요청 중 통신 오류가 발생했습니다.");
@@ -124,7 +125,7 @@ export default function PlanDetailPage() {
   const handleJoinUnit = async () => {
     try {
       await planService.applyToUnitPlan(id, selectedItem.id);
-      window.location.reload();
+      refreshData();
       message.success("코스 참여 신청이 완료되었습니다.");
     } catch (e) {
       message.error("참여 신청 중 오류가 발생했습니다.");
@@ -159,7 +160,7 @@ export default function PlanDetailPage() {
     try {
       const response = await axiosInstance.patch(`/plans/${id}/unit-plans/${selectedItem.id}`);
       console.log(response);
-      window.location.reload();
+      refreshData();
       message.success("일정이 확정되었습니다.");
     } catch (e) {
       console.error(e);
