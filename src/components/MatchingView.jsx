@@ -23,7 +23,8 @@ import {
 import { Form, Input, DatePicker, Button, message } from 'antd';
 import axiosInstance from "@utils/axiosInstance.js";
 import CustomModal from "@components/CustomModal.jsx";
-import { useMatchingStream } from "@hooks/useStreamContext.jsx"; // 💡 실제 파일 경로에 맞게 점검 필요
+import { useMatchingStream } from "@hooks/useStreamContext.jsx";
+import {CreateMatchingModal} from "@components/CreateMatchingModal.jsx"; // 💡 실제 파일 경로에 맞게 점검 필요
 
 // ==========================================
 // 1. 성향 및 프로필 필터 설정 서브 컴포넌트
@@ -72,47 +73,6 @@ const AcceptSuccessModal = ({ isOpen, onClose, meetupInfo }) => {
   );
 };
 
-// ==========================================
-// 3. 신규 매칭방 생성 팝업 모달
-// ==========================================
-const CreateMatchingModal = ({ isOpen, onClose, onSuccess }) => {
-  const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [filterSettings, setFilterSettings] = useState({ ie: null, sn: null, tf: null, pj: null, allowSmoking: false });
-
-  const handleSubmit = async (values) => {
-    setLoading(true);
-    try {
-      const payload = {
-        title: values.title,
-        description: values.description,
-        chatUrl: values.chatUrl || null,
-        scheduledAt: values.scheduledAt ? values.scheduledAt.format('YYYY-MM-DDTHH:mm:ss') : null,
-        recruitedAt: new Date().toISOString().split('.')[0],
-        ...filterSettings,
-        lat: 35.6860, lng: 139.7671
-      };
-      await axiosInstance.post("/matching", payload);
-      message.success('매칭방이 성공적으로 생성되었습니다!');
-      if (onSuccess) onSuccess();
-      onClose();
-    } catch (error) {
-      message.error('매칭방 생성 중 에러가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-      <CustomModal isOpen={isOpen} onClose={onClose} title="" maxWidth="max-w-[430px]" buttons={<Button type="primary" loading={loading} onClick={() => form.submit()} className="w-full h-[48px] bg-blue-500 text-white">생성하기</Button>}>
-        <Form form={form} layout="vertical" onFinish={handleSubmit} requiredMark={false} className="w-full space-y-3.5">
-          <Form.Item name="title" label="방 제목 *" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="description" label="상세 설명 *" rules={[{ required: true }]}><Input.TextArea rows={2} /></Form.Item>
-          <Form.Item name="scheduledAt" label="모집 마감 시간" rules={[{ required: true }]}><DatePicker showTime className="w-full" /></Form.Item>
-        </Form>
-      </CustomModal>
-  );
-};
 
 // ==========================================
 // 4. 메인 매칭 뷰 컴포넌트
@@ -207,7 +167,9 @@ export const MatchingView = () => {
           </button>
         </div>
 
-        <CreateMatchingModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={() => connectSSE('host')} />
+        <CreateMatchingModal isOpen={isModalOpen}
+                             onClose={() => setIsModalOpen(false)}
+                             onSuccess={() => connectSSE('host')} />
         <AcceptSuccessModal isOpen={isSuccessModalOpen} onClose={() => { setIsSuccessModalOpen(false); setSelectedMeetup(null); }} meetupInfo={selectedMeetup} />
 
         {/* 메인 콘텐츠 바디 */}
