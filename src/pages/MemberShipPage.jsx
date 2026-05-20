@@ -151,7 +151,7 @@ export default function MembershipPage() {
                   className="h-[44px] rounded-[12px]"
                   options={[
                     { value: 'USER', label: '일반 회원' },
-                    { value: 'ADMIN', label: '관리자' }
+                    { value: 'SELLER', label: '판매자' }
                   ]}
               />
             </Form.Item>
