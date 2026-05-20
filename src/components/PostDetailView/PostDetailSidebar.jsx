@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Calendar, Edit3, UserCheck, Compass } from 'lucide-react';
+import { Calendar, Edit3, UserCheck, Compass, Crown } from 'lucide-react';
 
 export const PostDetailSidebar = ({
   post,
@@ -13,22 +13,22 @@ export const PostDetailSidebar = ({
 }) => {
   if (!post) return null;
 
+
+  const hostUser = post.planUnits[0].participants?.find(p => p.participationRole === 'HOST');
+  const avatarUrl = hostUser?.profileImageUrl || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(hostUser?.name || 'host')}&backgroundColor=f3f4f6`;
+
+  console.log(post,hostUser);
+
   return (
       <div className="w-full bg-white border border-[#E5E7EB] rounded-[16px] p-5 space-y-6">
 
         {/* 썸네일 요약 헤더 영역 */}
         <div className="space-y-3 border-b border-slate-100 pb-5">
-          {/* 💡 overflow-hidden을 주고 내부 이미지를 object-cover로 꽉 채움 */}
           <div className="w-full h-[140px] bg-[#EAECEF] rounded-[8px] overflow-hidden flex items-center justify-center border border-slate-100">
             {post.imageUrl ? (
-                <img
-                    src={post.imageUrl}
-                    alt={post.title}
-                    className="w-full h-full object-cover"
-                />
+                <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover" />
             ) : (
-                // 이미지가 깨지거나 유실되었을 때의 방어막 대체 텍스트/디자인
-                <span className="text-[11px] font-bold text-gray-400">No Custom Image</span>
+                <span className="text-[11px] font-bold text-gray-400">No Image</span>
             )}
           </div>
 
@@ -40,11 +40,28 @@ export const PostDetailSidebar = ({
               {post.title}
             </h3>
             <p className="text-xs text-gray-400 font-medium line-clamp-2 leading-relaxed">
-              {post.description || '개설된 투어 패키지 루트 정보가 서술되어 있지 않습니다.'}
+              {post.description || '여행 설명이 없습니다.'}
             </p>
             <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold pt-2">
               <Calendar size={12} />
               <span>{post.startDate} ~ {post.endDate}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 💡 [신규 이식]: 서브 타이틀 및 호스트 정보 카드 (일정 정보와 메뉴 사이 배치) */}
+        <div className="space-y-2">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1.5">호스트</p>
+          <div className="flex items-center gap-3 p-3 bg-gray-50/50 rounded-[12px] border border-gray-100">
+            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-white border border-gray-100 shadow-sm relative">
+              <img src={avatarUrl} alt={hostUser?.name} className="w-full h-full object-cover" />
+              <div className="absolute -bottom-0.5 -right-0.5 bg-amber-500 p-0.5 rounded-full text-white border border-white">
+                <Crown size={8} fill="currentColor" />
+              </div>
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-xs font-black text-[#333333] truncate">{hostUser?.name || '방장'}</h4>
+              <p className="text-[9px] font-bold text-gray-400">총괄 호스트</p>
             </div>
           </div>
         </div>

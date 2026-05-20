@@ -164,15 +164,8 @@ export const ProductsView = () => {
   return (
       <div className="bg-white rounded-2xl md:rounded-[32px] shadow-[0_8px_32px_rgba(0,0,0,0.03)] border border-gray-100 p-6 md:p-10 min-h-[800px] flex flex-col">
 
-        {/* 상단 헤더 타이틀 */}
         <div className="flex items-center justify-between mb-8 px-2">
-          <h2 className="text-xl md:text-2xl font-bold text-[#222222] tracking-tight">상품 관리 대시보드</h2>
-          <button
-              onClick={() => navigate('/products/manage')}
-              className="p-2.5 text-gray-700 hover:text-[#007AFF] bg-gray-50 hover:bg-gray-100 rounded-xl transition-all shadow-sm border border-gray-100"
-          >
-            <Settings size={20} />
-          </button>
+          <h2 className="text-xl md:text-2xl font-bold text-[#222222] tracking-tight">상품</h2>
         </div>
 
         {/* 대형 고급 필터 바 패널 */}
@@ -181,8 +174,6 @@ export const ProductsView = () => {
 
             {/* 3가지 커스텀 드롭다운 트리거 목록 */}
             <div className="flex flex-wrap items-center gap-2.5">
-
-              {/* [드롭다운 1] 국가/도시 다중 연동 선택 (알바몬 스타일) */}
               <div className="relative">
                 <button
                     type="button"

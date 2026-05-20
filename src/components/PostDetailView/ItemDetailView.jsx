@@ -4,10 +4,10 @@
  */
 
 import React from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Clock, Users, CheckCircle, AlertCircle } from 'lucide-react';
 import { JournalView } from '../JournalView.jsx';
 import { ParticipationView } from "@components/PostDetailView/ParticipationView.jsx";
-import { useProfile } from "@hooks/userContext.jsx"; // 유저 프로필 훅 추가
+import { useProfile } from "@hooks/userContext.jsx";
 
 export const ItemDetailView = ({
   item,
@@ -15,7 +15,7 @@ export const ItemDetailView = ({
   setActiveSubTab,
   onBack,
   onJoinUnit,
-  onConfirmUnit, // 호스트 전용 확정하기 핸들러 추가
+  onConfirmUnit,
   onViewProduct,
   onOrderProduct
 }) => {
@@ -23,73 +23,92 @@ export const ItemDetailView = ({
 
   if (!item) return null;
 
-  // 호스트 여부 판별 (참여자 목록 중 'HOST' 역할을 가진 유저의 ID와 현재 유저 ID 비교)
   const currentUserId = user?.id;
   const hostUser = item.participants?.find(p => p.participationRole === 'HOST');
   const isHost = hostUser && hostUser.userId === currentUserId;
 
   return (
-      <div className="space-y-8">
-        {/* 상단 타이틀 구역 */}
-        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-          <h3 className="text-2xl font-black text-[#333333] tracking-tight">{item.title}</h3>
+      <div className="w-full space-y-8 animate-in fade-in duration-300">
+        {/* 상단 헤더: 유닛 타이틀 강조 */}
+        <div className="flex items-start justify-between border-b border-gray-100 pb-6">
+          <div className="space-y-1">
+          <span className="text-[11px] font-black text-[#007AFF] uppercase tracking-wider">
+            Day {item.day} · 일정 {item.orderIndex}
+          </span>
+            <h3 className="text-3xl font-black text-[#111111] tracking-tight">{item.title}</h3>
+          </div>
           <button
               onClick={onBack}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#999999] hover:text-[#007AFF] transition-all"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#999999] hover:text-[#007AFF] transition-all pt-2"
           >
             <ArrowLeft size={14} /> 목록으로
           </button>
         </div>
 
-        {/* [스케치 반영]: 대형 레이아웃 요약 상단 블록 */}
-        <div className="border border-[#E5E7EB] rounded-[12px] p-6 flex flex-col md:flex-row gap-6 justify-between items-start">
-          <div className="flex flex-col md:flex-row gap-6 flex-1">
-            {/* 상품 사진 그레이존 */}
-            <div className="w-full md:w-[220px] h-[130px] bg-[#EAECEF] rounded-[6px] flex items-center justify-center text-xs font-bold text-gray-400 shrink-0">
-              상품 사진
+        {/* 정보 카드: 가로 100% 와이드 레이아웃 */}
+        <div className="bg-white border border-[#E5E7EB] rounded-[16px] p-8 shadow-sm">
+          <div className="flex flex-col md:flex-row justify-between items-start gap-8">
+            <div className="space-y-6 flex-1 w-full">
+              <div className="space-y-2">
+                <p className="text-sm font-bold text-gray-400">코스 설명</p>
+                <p className="text-base font-medium text-[#333333] leading-relaxed">
+                  {item.description || '등록된 상세 설명이 없습니다.'}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-4 pt-2">
+                <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-lg text-xs font-bold text-gray-600">
+                  <Clock size={16} className="text-gray-400" />
+                  {item.startTime?.substring(0, 5)} ~ {item.endTime?.substring(0, 5)}
+                </div>
+                <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-lg text-xs font-bold text-gray-600">
+                  <Users size={16} className="text-gray-400" />
+                  모집 현황: {item.currentCount} / {item.maxCount}명
+                </div>
+                <div className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold ${item.isConfirmed ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                  {item.isConfirmed ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                  {item.isConfirmed ? '일정 확정됨' : '일정 확정 대기중'}
+                </div>
+              </div>
             </div>
-            {/* 세부 명세 */}
-            <div className="space-y-1.5 py-0.5">
-              <p className="text-sm font-bold text-slate-700">{item.day}일차 일지</p>
-              <p className="text-sm font-bold text-slate-500">{item.description || '여행 설명이 없습니다.'}</p>
-              <p className="text-xs font-medium text-gray-400">일시: {item.startTime?.substring(0,5)} ~ {item.endTime?.substring(0,5)}</p>
-              <p className="text-xs font-black text-[#007AFF]">{item.currentCount || 1}명 / {item.maxCount || 6}명 모집 중</p>
+
+            {/* 버튼 영역 */}
+            <div className="flex flex-col gap-3 min-w-[160px] w-full md:w-auto">
+              {isHost ? (
+                  <button
+                      onClick={onConfirmUnit}
+                      disabled={item.isConfirmed}
+                      className={`w-full px-6 py-3.5 text-xs font-black rounded-[8px] transition-all border ${
+                          item.isConfirmed
+                              ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                              : "bg-[#007AFF] text-white hover:bg-blue-600 shadow-lg shadow-blue-200"
+                      }`}
+                  >
+                    {item.isConfirmed ? "확정 완료" : "일정 확정하기"}
+                  </button>
+              ) : (
+                  <button
+                      onClick={onJoinUnit}
+                      className="w-full px-6 py-3.5 bg-[#111111] text-white hover:bg-[#333333] text-xs font-black rounded-[8px] transition-all shadow-lg"
+                  >
+                    참여하기
+                  </button>
+              )}
             </div>
           </div>
-
-          {/* 우측 상단 배치: 호스트 여부에 따른 버튼 조건부 렌더링 */}
-          {isHost ? (
-              <button
-                  onClick={onConfirmUnit}
-                  disabled={item.isConfirmed}
-                  className={`w-full md:w-auto px-6 py-2.5 text-xs font-bold rounded-[4px] transition-all shrink-0 border ${
-                      item.isConfirmed
-                          ? "bg-[#E6FFF2] border-[#00C853] text-[#00C853] cursor-not-allowed"
-                          : "border-[#007AFF] text-[#007AFF] hover:bg-[#007AFF] hover:text-white"
-                  }`}
-              >
-                {item.isConfirmed ? "확정 완료" : "일정 확정하기"}
-              </button>
-          ) : (
-              <button
-                  onClick={onJoinUnit}
-                  className="w-full md:w-auto px-6 py-2.5 border border-[#333333] text-[#333333] hover:bg-[#333333] hover:text-white text-xs font-bold rounded-[4px] transition-all shrink-0"
-              >
-                참여하기
-              </button>
-          )}
         </div>
 
+        {/* 탭 네비게이션 */}
         <div className="flex gap-8 border-b border-gray-200 text-sm font-bold">
           {[
-            { id: 'participation', label: '참여' },
-            { id: 'product', label: '상품' },
-            { id: 'record', label: '기록' }
+            { id: 'participation', label: '참여 관리' },
+            { id: 'product', label: '상품 연동' },
+            { id: 'record', label: '여행 기록' }
           ].map(tab => (
               <button
                   key={tab.id}
                   onClick={() => setActiveSubTab(tab.id)}
-                  className={`pb-3 border-b-2 transition-all ${
+                  className={`pb-4 border-b-2 transition-all ${
                       activeSubTab === tab.id
                           ? 'border-[#333333] text-[#333333] font-black'
                           : 'border-transparent text-gray-400 hover:text-gray-600'
@@ -100,31 +119,29 @@ export const ItemDetailView = ({
           ))}
         </div>
 
-        {/* 하단 서브 뷰 컴포넌트 마운트 파트 */}
+        {/* 하단 서브 뷰 */}
         <div className="pt-2">
           {activeSubTab === 'participation' ? (
               <ParticipationView selectedUnit={item} />
           ) : activeSubTab === 'record' ? (
               <JournalView selectedUnit={item} />
           ) : (
-              /* 상품 연동 내역 탭 */
-              <div className="space-y-4 max-w-xl">
+              <div className="space-y-4">
                 {item.product ? (
-                    <div className="border border-[#E5E7EB] rounded-[12px] p-6 space-y-4">
-                      <div className="flex gap-4">
-                        <div className="w-[100px] h-[70px] bg-slate-100 rounded flex items-center justify-center text-[10px] font-bold text-gray-400">상품 사진</div>
-                        <div>
-                          <h4 className="text-base font-black text-slate-800">{item.product.productName}</h4>
-                          <p className="text-xs font-bold text-[#007AFF] mt-1">{item.product.price?.toLocaleString()}원</p>
-                        </div>
+                    <div className="bg-white border border-[#E5E7EB] rounded-[16px] p-6 flex flex-col sm:flex-row items-center gap-6">
+                      <div className="flex-1 space-y-2">
+                        <h4 className="text-lg font-black text-slate-800">{item.product.productName}</h4>
+                        <p className="text-sm font-bold text-[#007AFF]">{item.product.price?.toLocaleString()}원</p>
                       </div>
-                      <div className="flex gap-2 pt-2 border-t border-slate-50">
-                        <button onClick={onViewProduct} className="flex-1 py-2 border border-slate-200 text-xs font-bold text-slate-600 rounded">상세보기</button>
-                        <button onClick={onOrderProduct} className="flex-1 py-2 bg-[#007AFF] text-xs font-bold text-white rounded" >구매하기</button>
+                      <div className="flex gap-3 w-full sm:w-auto">
+                        <button onClick={onViewProduct} className="flex-1 sm:flex-none px-6 py-3 border border-gray-200 text-xs font-bold text-gray-600 rounded-lg hover:bg-gray-50">상세보기</button>
+                        <button onClick={onOrderProduct} className="flex-1 sm:flex-none px-6 py-3 bg-[#007AFF] text-white text-xs font-bold rounded-lg hover:bg-blue-600">구매하기</button>
                       </div>
                     </div>
                 ) : (
-                    <div className="text-left py-10 text-gray-400 text-xs font-bold">연동된 패키지 상품 이용권 정보가 없습니다.</div>
+                    <div className="text-center py-12 text-gray-400 text-xs font-bold bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                      연동된 상품 정보가 없습니다.
+                    </div>
                 )}
               </div>
           )}

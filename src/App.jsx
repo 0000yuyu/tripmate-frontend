@@ -65,7 +65,6 @@ export default function App() {
             <Route path="plans/create" element={<PlanCreatePage/>}/>
             <Route path="plans/:id" element={<PlanDetailPage/>}/>
             <Route path="products/:id" element={<ProductDetailView/>}/>
-            <Route path="products/manage" element={<ProductManagementView />} />
             <Route path="payment" element={<PaymentPage/>}/>
             <Route path="products" element={<ProductsView />} />
             <Route path="matching" element={<MatchingView />} />

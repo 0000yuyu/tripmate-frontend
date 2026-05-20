@@ -1,6 +1,7 @@
-import  {createContext, useContext, useEffect, useState} from 'react';
+import React, {createContext, useContext, useEffect, useState} from 'react';
 import axiosInstance from "../utils/axiosInstance";
 import {isLoggedIn} from "../utils/auth";
+import {Crown} from "lucide-react";
 
 // 1. Context 생성
 const ProfileContext = createContext();
@@ -41,3 +42,5 @@ export const ProfileProvider = ({children}) => {
 };
 
 export const useProfile = () => useContext(ProfileContext);
+
+
