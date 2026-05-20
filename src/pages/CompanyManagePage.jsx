@@ -208,7 +208,7 @@ export default function CompanyManagementPage() {
         };
 
         const response = await axiosInstance.post('/products', payload,{ headers: { 'X-Company-Id': companyId } });
-        if (response.data?.success) message.success('신규 마스터 상품 등록에 성공했습니다.');
+        if (response.data?.success) message.success('신규 상품 등록에 성공했습니다.');
       }
 
       setIsModalOpen(false);
@@ -254,9 +254,6 @@ export default function CompanyManagementPage() {
       >
         <div className="flex items-center justify-between select-none">
           <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
-            <span className="hover:bg-gray-100 px-2 py-0.5 rounded cursor-pointer transition-colors">파트너 홈</span>
-            <ChevronRight size={10} />
-            <span className="text-[#37352f] font-semibold">전수 재고 관리 대장</span>
           </div>
           <button onClick={fetchData} className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all">
             <RefreshCw size={14} className={isLoading ? "animate-spin text-blue-500" : ""} />
@@ -315,7 +312,7 @@ export default function CompanyManagementPage() {
           <div className="flex items-center justify-between text-xs font-bold text-gray-400 select-none pb-1">
             <div className="flex items-center gap-2">
               <SlidersHorizontal size={12} />
-              <span>노션 데이터베이스 조건식 필터</span>
+              <span>데이터베이스 필터</span>
             </div>
             {(searchQuery || selectedProductFilter !== 'all' || selectedStatusFilter !== 'all' || selectedDateRange) && (
                 <button onClick={() => { setSearchQuery(''); setSelectedProductFilter('all'); setSelectedStatusFilter('all'); setSelectedDateRange(null); }} className="text-gray-400 hover:text-blue-500 font-medium transition-colors text-[11px]">조건 초기화</button>
@@ -357,7 +354,7 @@ export default function CompanyManagementPage() {
                 <thead className="bg-[#FBFBFA] border-b border-gray-200 select-none">
                 <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                   <th className="px-5 py-3 w-[50px] text-center">#</th>
-                  <th className="px-4 py-3 max-w-[340px]">상품 항목 (마스터 타이틀)</th>
+                  <th className="px-4 py-3 max-w-[340px]">상품 항목</th>
                   <th className="px-4 py-3 w-[180px]">해당 이용일자</th>
                   <th className="px-4 py-3 text-right w-[130px]">정가 (원화)</th>
                   <th className="px-4 py-3 text-center w-[120px]">현황 상태</th>
@@ -441,7 +438,7 @@ export default function CompanyManagementPage() {
             <div className="space-y-1">
               <h3 className="text-base font-bold text-[#333333] tracking-tight">트립메이트 파트너 데이터 가이드</h3>
               <p className="text-xs font-medium text-[#666666]">
-                인라인 데이터 표에서는 필터 정렬 기준 변경 및 상단 검색을 통해 마스터 상품과 일자별 잔여 티켓을 복합적으로 제어할 수 있습니다.
+                필터 정렬 기준 변경 및 상단 검색을 통해 상품과 일자별 잔여 티켓을 복합적으로 제어할 수 있습니다.
               </p>
             </div>
             <button className="bg-white text-[#333333] p-3 rounded-xl border border-gray-200 shadow-xs group-hover:scale-105 transition-all self-end sm:self-auto">
@@ -460,14 +457,14 @@ export default function CompanyManagementPage() {
                 setSelectedState(null);
               }
             }}
-            title={modalMode === 'SCHEDULE' ? "스케줄 타임라인 일괄 생성" : "새 마스터 상품 등록"}
+            title={modalMode === 'SCHEDULE' ? "스케줄 타임라인 일괄 생성" : "새 상품 등록"}
             maxWidth={modalMode === 'SCHEDULE' ? "max-w-[460px]" : "max-w-[520px]"}
             buttons={
               <div className="flex gap-2 w-full">
                 <button type="button" disabled={modalLoading} onClick={() => { setIsModalOpen(false); form.resetFields(); setSelectedState(null); }} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-[14px] text-xs font-bold hover:bg-gray-200 transition-colors disabled:opacity-50">취소하기</button>
                 <button type="button" disabled={modalLoading} onClick={() => form.submit()} className="flex-[2] py-3 bg-blue-600 text-white rounded-[14px] text-xs font-bold hover:bg-blue-500 transition-colors shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50">
                   {modalLoading && <RefreshCw size={12} className="animate-spin" />}
-                  {modalMode === 'SCHEDULE' ? '일괄 추가 실행' : '마스터 상품 등록'}
+                  {modalMode === 'SCHEDULE' ? '일괄 추가 실행' : '상품 등록'}
                 </button>
               </div>
             }
@@ -475,7 +472,7 @@ export default function CompanyManagementPage() {
           <Form form={form} layout="vertical" onFinish={handleFormSubmit} requiredMark={false} className="space-y-1.5">
             {modalMode === 'SCHEDULE' ? (
                 <>
-                  <Form.Item name="productId" label={<span className="text-xs font-black text-slate-700">대상 마스터 상품 지정</span>} rules={[{ required: true, message: '등록 타겟 상품을 지정하세요.' }]}>
+                  <Form.Item name="productId" label={<span className="text-xs font-black text-slate-700">대상 상품 지정</span>} rules={[{ required: true, message: '등록 타겟 상품을 지정하세요.' }]}>
                     <select className="w-full bg-gray-50 border border-gray-200 rounded-[12px] p-2.5 text-xs font-bold text-slate-800 outline-none focus:border-[#007AFF]">
                       <option value="">상품을 선택하세요</option>
                       {rawProducts.map(p => <option key={p.id} value={p.id}>{p.productName}</option>)}
@@ -491,7 +488,7 @@ export default function CompanyManagementPage() {
                 </>
             ) : (
                 <>
-                  <Form.Item name="productName" label={<span className="text-xs font-black text-slate-700">마스터 상품 이름</span>} rules={[{ required: true, message: '상품 타이틀명을 기입하세요.' }]}>
+                  <Form.Item name="productName" label={<span className="text-xs font-black text-slate-700">상품 이름</span>} rules={[{ required: true, message: '상품 타이틀명을 기입하세요.' }]}>
                     <Input placeholder="예: 도쿄 해리포터 스튜디오 입장권" className="py-2.5 rounded-[12px] text-xs font-medium bg-gray-50" />
                   </Form.Item>
 
