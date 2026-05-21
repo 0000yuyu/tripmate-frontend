@@ -60,7 +60,7 @@ export default function LoginPage() {
   };
 
   return (
-      <div className='flex absolte top-0 left-0 right-0 bg-white z-[100] justify-center items-center h-full w-full p-4 overflow-y-auto'>
+      <div className='flex absolute top-0 left-0 right-0 bg-white z-[100] justify-center items-center h-full w-full p-4 overflow-y-auto'>
         <div className='flex flex-col gap-2 w-full max-w-[400px] items-center my-8'>
 
           {/* 로고 영역 */}
